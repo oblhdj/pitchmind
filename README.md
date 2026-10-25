@@ -22,6 +22,7 @@ Microsoft Foundry · Microsoft Agent Framework · Azure Event Hubs · Azure Cont
 
 - [Implementation plan](docs/PLAN.pdf) ([LaTeX source](docs/PLAN.tex))
 - [Resources](docs/RESOURCES.md)
+- [Team split](docs/TEAM.md)
 
 ## Status
 
