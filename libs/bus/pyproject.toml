@@ -1,0 +1,13 @@
+[project]
+name = "pitchmind-bus"
+version = "0.1.0"
+description = "Publish/subscribe bus for PitchMind services (in-memory locally, Azure Event Hubs in the cloud)"
+requires-python = ">=3.12"
+dependencies = ["pitchmind-contracts"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["pitchmind_bus"]

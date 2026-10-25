@@ -1,0 +1,22 @@
+[project]
+name = "pitchmind-runner"
+version = "0.1.0"
+description = "Runs the PitchMind pipeline live and serves it over WebSocket"
+requires-python = ">=3.12"
+dependencies = [
+    "pitchmind-contracts",
+    "pitchmind-bus",
+    "pitchmind-simulator",
+    "pitchmind-stats",
+    "pitchmind-moments",
+    "pitchmind-agents",
+    "pitchmind-render",
+    "websockets>=13,<16",
+]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["pitchmind_runner"]
