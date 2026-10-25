@@ -56,7 +56,7 @@ MOMENTS: list[Scripted] = [
             "beginner_fr": Text(
                 "But de Harbour United !",
                 "Halvorsen marque après 9 minutes. Le « xG » (buts attendus) de son tir était de 0,38 : "
-                "une occasion de ce type finit au fond environ 4 fois sur 10.",
+                "plus ce chiffre est élevé, plus l'occasion était facile.",
                 ["La passe d'Albers était difficile (0,71 sur 1).", "Le tir de Halvorsen valait 0,38 xG."],
             ),
         },
@@ -144,8 +144,8 @@ MOMENTS: list[Scripted] = [
             ),
             "beginner_fr": Text(
                 "Énorme arrêt de Sandvik",
-                "Haddad frappe à 112,3 km/h. Cette occasion valait 0,41 xG, soit environ 4 chances sur 10 "
-                "de marquer, mais le gardien Sandvik a réussi l'arrêt.",
+                "Haddad frappe à 112,3 km/h. Cette occasion valait 0,41 xG, une vraie occasion de but, "
+                "mais le gardien Sandvik a réussi l'arrêt.",
                 ["Le tir de Haddad valait 0,41 xG, à 112,3 km/h.", "Sandvik a arrêté le tir."],
             ),
             "player_h10": Text(
@@ -379,14 +379,14 @@ MOMENTS: list[Scripted] = [
             ),
             "casual_ar": Text(
                 "Haddad يقلب الطاولة! 2-1",
-                "صاروخ من Haddad بسرعة 117.4 كم/س من 18.6 متر! فرصة نسبة نجاحها 12% فقط، لكنه حوّلها "
-                "إلى هدف. نورث سيتي يتقدم.",
+                "صاروخ من Haddad بسرعة 117.4 كم/س من 18.6 متر! فرصة صعبة جداً بأهداف متوقعة 0.12 فقط، "
+                "لكنه حوّلها إلى هدف. نورث سيتي يتقدم.",
                 ["تسديدة Haddad: 117.4 كم/س من 18.6 متر.", "نورث سيتي يتقدم 2-1."],
             ),
             "beginner_fr": Text(
                 "But exceptionnel de Haddad !",
-                "Haddad marque de loin (18,6 m). Le xG du tir était de 0,12 : un tir comme celui-ci rentre "
-                "à peu près 1 fois sur 8. North City mène 2-1.",
+                "Haddad marque de loin (18,6 m). Le xG du tir était de 0,12 : un tir très difficile, qui "
+                "rentre rarement. North City mène 2-1.",
                 ["Tir de Haddad : 0,12 xG depuis 18,6 m, à 117,4 km/h.", "North City mène 2-1."],
             ),
             "player_h10": Text(

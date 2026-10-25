@@ -3,6 +3,7 @@
 -e ./services/simulator
 -e ./services/stats-engine
 -e ./services/moment-detector
+-e ./services/agents
 pytest>=8
 ruff>=0.6
 mypy>=1.11
