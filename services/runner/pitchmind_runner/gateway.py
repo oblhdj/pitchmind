@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from collections import deque
 from pathlib import Path
 from typing import TextIO
@@ -35,6 +36,8 @@ from .stages import Stage, consume
 logger = logging.getLogger(__name__)
 
 HISTORY_EVENTS = 300  # recent events sent to a client that joins mid-match
+MAX_CLIENT_FRAME = 4096  # bytes; clients only ever send tiny subscribe messages
+SUBSCRIBE_INTERVAL_S = 1.0  # a client may switch segment at most once per second
 
 
 def wants(segment: str | None, message: Wire) -> bool:
@@ -57,6 +60,7 @@ class Gateway:
         self.clients: dict[ServerConnection, str | None] = {}
         # Clients still receiving their catch-up: live messages wait here so order is kept.
         self._catching_up: dict[ServerConnection, list[str]] = {}
+        self._last_subscribe: dict[ServerConnection, float] = {}
         self._record: TextIO | None = None
         if record is not None:
             record.parent.mkdir(parents=True, exist_ok=True)
@@ -131,6 +135,7 @@ class Gateway:
         finally:
             self.clients.pop(ws, None)
             self._catching_up.pop(ws, None)
+            self._last_subscribe.pop(ws, None)
 
     async def _send_in_order(self, ws: ServerConnection, segment: str | None, history: list[Wire]) -> None:
         """Send ``history``, then whatever arrived live meanwhile, then switch the client to live.
@@ -154,6 +159,10 @@ class Gateway:
             return
         if not isinstance(data, dict) or data.get("type") != "subscribe":
             return
+        now = time.monotonic()
+        if now - self._last_subscribe.get(ws, float("-inf")) < SUBSCRIBE_INTERVAL_S:
+            return  # throttled: each switch resends a history, so it must not be spammable
+        self._last_subscribe[ws] = now
         key = data.get("segment_key")
         segment = key if isinstance(key, str) and key else None
         await self._send_in_order(ws, segment, self.segment_history(segment))

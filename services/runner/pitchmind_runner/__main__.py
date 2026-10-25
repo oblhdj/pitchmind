@@ -22,7 +22,7 @@ from pitchmind_contracts import AgentName
 from pitchmind_simulator import SCENARIOS
 from websockets.asyncio.server import serve
 
-from .gateway import Gateway
+from .gateway import MAX_CLIENT_FRAME, Gateway
 from .pipeline import Pipeline, PipelineConfig, read_recording, replay_recording
 
 logger = logging.getLogger("pitchmind_runner")
@@ -60,7 +60,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 async def run(args: argparse.Namespace) -> None:
     gateway = Gateway(record=args.record)
-    async with serve(gateway.handler, args.host, args.port):
+    async with serve(gateway.handler, args.host, args.port, max_size=MAX_CLIENT_FRAME):
         logger.info("live feed on ws://%s:%d/ws  ->  open http://localhost:3000/?mode=live", args.host, args.port)
         if args.replay:
             messages = read_recording(args.replay)

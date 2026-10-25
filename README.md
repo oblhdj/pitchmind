@@ -53,6 +53,19 @@ cd apps/web; npm install; npm run dev
 `--disable narrative` kills an agent live for the failure-recovery demo: its insights fall back to the
 verified template text and the screen is never empty.
 
+## Deploy to Azure
+
+One image, one Container App per stage, Azure Event Hubs between them, Managed Identity everywhere
+(no keys). See [infra/README.md](infra/README.md):
+
+```powershell
+az login
+./infra/deploy.ps1          # prints the public URLs when done
+```
+
+CI (`.github/workflows/ci.yml`) runs ruff, mypy, pytest, the web lint/typecheck/build/Playwright suite,
+compiles the Bicep and builds both Docker images on every pull request.
+
 See [contracts/README.md](contracts/README.md) for the message formats and the mock stream.
 
 ## Docs

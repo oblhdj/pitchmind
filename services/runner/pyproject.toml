@@ -5,7 +5,7 @@ description = "Runs the PitchMind pipeline live and serves it over WebSocket"
 requires-python = ">=3.12"
 dependencies = [
     "pitchmind-contracts",
-    "pitchmind-bus",
+    "pitchmind-bus[eventhubs]",
     "pitchmind-simulator",
     "pitchmind-stats",
     "pitchmind-moments",
