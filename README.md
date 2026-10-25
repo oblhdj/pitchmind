@@ -34,6 +34,7 @@ py -3.12 -m venv .venv            # or any Python 3.12 interpreter
 # Pipeline so far
 .\.venv\Scripts\python.exe -m pitchmind_simulator                     # demo match -> data/sim/M001.jsonl
 .\.venv\Scripts\python.exe -m pitchmind_stats data/sim/M001.jsonl     # -> data/sim/M001.stats.jsonl
+.\.venv\Scripts\python.exe -m pitchmind_moments data/sim/M001.jsonl   # -> data/sim/M001.moments.jsonl
 ```
 
 See [contracts/README.md](contracts/README.md) for the message formats and the mock stream.

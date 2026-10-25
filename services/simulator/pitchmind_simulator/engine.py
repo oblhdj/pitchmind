@@ -314,41 +314,14 @@ class MatchEngine:
             distance_m=round(distance(start, end), 1),
         )
 
+    # Random draws happen in a fixed order inside each action; keep it, or every seed changes.
+
     def _pass(self) -> None:
         passer = self._state(self.carrier or self._pick(self.possession, zone(self.ball[0])))
         start = self.ball
-        attacking = self._late_and_trailing(self.possession)
-        long_bias = 0.15 if self.pressured and zone(start[0]) == "own" else 0.0
-
-        r = self.rng.random()
-        if r < 0.62 - long_bias:
-            length = self.rng.uniform(7, 18)
-        elif r < 0.90:
-            length = self.rng.uniform(18, 30)
-        else:
-            length = self.rng.uniform(30, 55)
-
-        angle = self.rng.gauss(0.4 if attacking else 0.25, 0.95)
-        angle = angle if self.rng.random() < 0.5 else -angle
-        if start[1] < 8:
-            angle = abs(angle)
-        elif start[1] > 60:
-            angle = -abs(angle)
-
-        end = clamp_point(start[0] + length * math.cos(angle) + 3, start[1] + length * math.sin(angle))
-        length = distance(start, end)
+        end, length = self._pass_target(start)
         difficulty = pass_difficulty(start, end, under_pressure=self.pressured)
-        attrs = passer.player.attributes
-        p_success = (
-            1.11
-            - 0.52 * difficulty
-            + (attrs.passing - 70) / 250
-            - passer.fatigue(self.t) * 0.25
-            + (0.01 if self.possession is HOME else 0.0)
-            - self._chaos() * 0.28
-            - self._press_penalty()
-        )
-        success = self.rng.random() < clamp(p_success, 0.25, 0.97)
+        success = self.rng.random() < clamp(self._pass_success_p(passer, difficulty), 0.25, 0.97)
         ball_speed = round(clamp(25 + length * 1.25 + self.rng.gauss(0, 4), 15, 110), 1)
         common = dict(
             team=self.possession,
@@ -359,20 +332,55 @@ class MatchEngine:
             ball_speed_kmh=ball_speed,
             distance_m=round(length, 1),
         )
-
         if success:
-            receiver = self._pick(self.possession, zone(end[0]), exclude=passer.player.id)
-            if end[0] > 85 and self.rng.random() < 0.012:
-                self._emit(EventType.PASS, receiver=receiver, outcome=Outcome.FAILURE, **common)
-                self._emit(EventType.OFFSIDE, team=self.possession, player=receiver, start=end)
-                self._advance(12 + self.rng.uniform(0, 8))
-                self._turnover(end)
-                return
-            self._emit(EventType.PASS, receiver=receiver, outcome=Outcome.SUCCESS, **common)
-            self.ball, self.carrier = end, receiver
-            self._advance(1.2 + length / 14 + self.rng.random() * 1.5)
-            return
+            self._complete_pass(passer, end, length, common)
+        else:
+            self._misplaced_pass(end, length, common)
 
+    def _pass_target(self, start: tuple[float, float]) -> tuple[tuple[float, float], float]:
+        long_bias = 0.15 if self.pressured and zone(start[0]) == "own" else 0.0
+        r = self.rng.random()
+        if r < 0.62 - long_bias:
+            length = self.rng.uniform(7, 18)
+        elif r < 0.90:
+            length = self.rng.uniform(18, 30)
+        else:
+            length = self.rng.uniform(30, 55)
+
+        angle = self.rng.gauss(0.4 if self._late_and_trailing(self.possession) else 0.25, 0.95)
+        angle = angle if self.rng.random() < 0.5 else -angle
+        if start[1] < 8:
+            angle = abs(angle)
+        elif start[1] > 60:
+            angle = -abs(angle)
+        end = clamp_point(start[0] + length * math.cos(angle) + 3, start[1] + length * math.sin(angle))
+        return end, distance(start, end)
+
+    def _pass_success_p(self, passer: PlayerState, difficulty: float) -> float:
+        attrs = passer.player.attributes
+        return (
+            1.11
+            - 0.52 * difficulty
+            + (attrs.passing - 70) / 250
+            - passer.fatigue(self.t) * 0.25
+            + (0.01 if self.possession is HOME else 0.0)
+            - self._chaos() * 0.28
+            - self._press_penalty()
+        )
+
+    def _complete_pass(self, passer: PlayerState, end: tuple[float, float], length: float, common: Any) -> None:
+        receiver = self._pick(self.possession, zone(end[0]), exclude=passer.player.id)
+        if end[0] > 85 and self.rng.random() < 0.012:
+            self._emit(EventType.PASS, receiver=receiver, outcome=Outcome.FAILURE, **common)
+            self._emit(EventType.OFFSIDE, team=self.possession, player=receiver, start=end)
+            self._advance(12 + self.rng.uniform(0, 8))
+            self._turnover(end)
+            return
+        self._emit(EventType.PASS, receiver=receiver, outcome=Outcome.SUCCESS, **common)
+        self.ball, self.carrier = end, receiver
+        self._advance(1.2 + length / 14 + self.rng.random() * 1.5)
+
+    def _misplaced_pass(self, end: tuple[float, float], length: float, common: Any) -> None:
         self._emit(EventType.PASS, outcome=Outcome.FAILURE, **common)
         self._advance(1.0 + length / 14)
         if self.rng.random() < 0.7:
@@ -384,45 +392,10 @@ class MatchEngine:
 
     def _carry(self) -> None:
         carrier = self._state(self.carrier or self._pick(self.possession, zone(self.ball[0])))
-        attrs = carrier.player.attributes
         start = self.ball
-        length = self.rng.uniform(4, 10 + attrs.pace / 8)
-        angle = self.rng.gauss(0.15, 0.6) * (1 if self.rng.random() < 0.5 else -1)
-        end = clamp_point(start[0] + length * math.cos(angle), start[1] + length * math.sin(angle))
-        speed = round(clamp(14 + attrs.pace * 0.11 * (1 - carrier.fatigue(self.t)) + self.rng.gauss(0, 1.5), 8, 34), 1)
-        chaos = self._chaos()
-
-        if self.rng.random() < 0.2 + (0.18 if self.pressured else 0.0) + chaos * 0.3 + 2 * self._press_penalty():
-            defender = self._state(self._defender())
-            if self.rng.random() < 0.27 + chaos * 0.25:
-                self._foul(defender)
-                return
-            p_tackle = clamp(
-                0.48 + (defender.player.attributes.defending - attrs.dribbling) / 180 + chaos * 0.1, 0.2, 0.8
-            )
-            mid = clamp_point((start[0] + end[0]) / 2, (start[1] + end[1]) / 2)
-            if self.rng.random() < p_tackle:
-                self._emit(
-                    EventType.CARRY,
-                    team=self.possession,
-                    player=carrier.player.id,
-                    start=start,
-                    end=mid,
-                    under_pressure=True,
-                    player_speed_kmh=speed,
-                    distance_m=round(distance(start, mid), 1),
-                )
-                self._advance(1.5)
-                self._turnover(mid, defender.player.id, EventType.TACKLE, Outcome.SUCCESS)
-                return
-            self._emit(
-                EventType.TACKLE,
-                team=other(self.possession),
-                player=defender.player.id,
-                start=flip(start),
-                outcome=Outcome.FAILURE,
-            )
-
+        end, speed = self._carry_path(carrier, start)
+        if self._challenged_carry(carrier, start, end, speed):
+            return
         self._emit(
             EventType.CARRY,
             team=self.possession,
@@ -435,6 +408,51 @@ class MatchEngine:
         )
         self.ball = end
         self._advance(distance(start, end) / (speed / 3.6) + 0.5)
+
+    def _carry_path(self, carrier: PlayerState, start: tuple[float, float]) -> tuple[tuple[float, float], float]:
+        attrs = carrier.player.attributes
+        length = self.rng.uniform(4, 10 + attrs.pace / 8)
+        angle = self.rng.gauss(0.15, 0.6) * (1 if self.rng.random() < 0.5 else -1)
+        end = clamp_point(start[0] + length * math.cos(angle), start[1] + length * math.sin(angle))
+        speed = round(clamp(14 + attrs.pace * 0.11 * (1 - carrier.fatigue(self.t)) + self.rng.gauss(0, 1.5), 8, 34), 1)
+        return end, speed
+
+    def _challenged_carry(
+        self, carrier: PlayerState, start: tuple[float, float], end: tuple[float, float], speed: float
+    ) -> bool:
+        """A defender may challenge. Returns True if the carry ended (foul or ball won)."""
+        chaos = self._chaos()
+        if self.rng.random() >= 0.2 + (0.18 if self.pressured else 0.0) + chaos * 0.3 + 2 * self._press_penalty():
+            return False
+        defender = self._state(self._defender())
+        if self.rng.random() < 0.27 + chaos * 0.25:
+            self._foul(defender)
+            return True
+        dribbling = carrier.player.attributes.dribbling
+        p_tackle = clamp(0.48 + (defender.player.attributes.defending - dribbling) / 180 + chaos * 0.1, 0.2, 0.8)
+        mid = clamp_point((start[0] + end[0]) / 2, (start[1] + end[1]) / 2)
+        if self.rng.random() < p_tackle:
+            self._emit(
+                EventType.CARRY,
+                team=self.possession,
+                player=carrier.player.id,
+                start=start,
+                end=mid,
+                under_pressure=True,
+                player_speed_kmh=speed,
+                distance_m=round(distance(start, mid), 1),
+            )
+            self._advance(1.5)
+            self._turnover(mid, defender.player.id, EventType.TACKLE, Outcome.SUCCESS)
+            return True
+        self._emit(
+            EventType.TACKLE,
+            team=other(self.possession),
+            player=defender.player.id,
+            start=flip(start),
+            outcome=Outcome.FAILURE,
+        )
+        return False
 
     def _clear(self) -> None:
         player = self.carrier or self._pick(self.possession, "own")
@@ -461,59 +479,59 @@ class MatchEngine:
 
     def _shoot(self, forced: Outcome | None = None) -> None:
         shooter = self._state(self.carrier or self._pick(self.possession, "final"))
-        attrs = shooter.player.attributes
         start = self.ball
-        xg = expected_goals(start, under_pressure=self.pressured)
         speed = round(
-            clamp(55 + attrs.finishing * 0.4 + distance_to_goal(start) * 0.6 + self.rng.gauss(0, 7), 40, 128), 1
-        )
-
-        if forced is not None:
-            outcome = forced
-        else:
-            # Calibrated so goals ~= xG on average; good finishers beat their xG slightly.
-            p_goal = clamp(xg * (0.97 + (attrs.finishing - 75) / 200) * (1 - shooter.fatigue(self.t) * 0.3), 0.005, 0.8)
-            r = self.rng.random()
-            if r < p_goal:
-                outcome = Outcome.ON_TARGET if self.sc.lock_score else Outcome.GOAL
-            elif r < p_goal + 0.27:
-                outcome = Outcome.ON_TARGET
-            elif r < p_goal + 0.52:
-                outcome = Outcome.BLOCKED
-            else:
-                outcome = Outcome.OFF_TARGET
-
-        if outcome in (Outcome.GOAL, Outcome.ON_TARGET):
-            end = clamp_point(105, GOAL_Y + self.rng.gauss(0, 2.2))
-        elif outcome is Outcome.OFF_TARGET:
-            end = clamp_point(105, GOAL_Y + self.rng.choice((-1, 1)) * self.rng.uniform(4.5, 12))
-        else:
-            end = clamp_point(start[0] + 2, start[1])
-
+            clamp(55 + shooter.player.attributes.finishing * 0.4 + distance_to_goal(start) * 0.6
+                  + self.rng.gauss(0, 7), 40, 128),
+            1,
+        )  # fmt: skip
+        outcome = forced if forced is not None else self._shot_outcome(shooter, start)
         shot = self._emit(
             EventType.SHOT,
             team=self.possession,
             player=shooter.player.id,
             start=start,
-            end=end,
+            end=self._shot_end(start, outcome),
             outcome=outcome,
             under_pressure=self.pressured,
             ball_speed_kmh=speed,
         )
         self._advance(1.5)
-        attacking, defending = self.possession, other(self.possession)
+        self._after_shot(shot, outcome, start)
 
+    def _shot_outcome(self, shooter: PlayerState, start: tuple[float, float]) -> Outcome:
+        # Calibrated so goals ~= xG on average; good finishers beat their xG slightly.
+        xg = expected_goals(start, under_pressure=self.pressured)
+        finishing = shooter.player.attributes.finishing
+        p_goal = clamp(xg * (0.97 + (finishing - 75) / 200) * (1 - shooter.fatigue(self.t) * 0.3), 0.005, 0.8)
+        r = self.rng.random()
+        if r < p_goal:
+            return Outcome.ON_TARGET if self.sc.lock_score else Outcome.GOAL
+        if r < p_goal + 0.27:
+            return Outcome.ON_TARGET
+        if r < p_goal + 0.52:
+            return Outcome.BLOCKED
+        return Outcome.OFF_TARGET
+
+    def _shot_end(self, start: tuple[float, float], outcome: Outcome) -> tuple[float, float]:
+        if outcome in (Outcome.GOAL, Outcome.ON_TARGET):
+            return clamp_point(105, GOAL_Y + self.rng.gauss(0, 2.2))
+        if outcome is Outcome.OFF_TARGET:
+            return clamp_point(105, GOAL_Y + self.rng.choice((-1, 1)) * self.rng.uniform(4.5, 12))
+        return clamp_point(start[0] + 2, start[1])
+
+    def _after_shot(self, shot: MatchEvent, outcome: Outcome, start: tuple[float, float]) -> None:
+        attacking, defending = self.possession, other(self.possession)
         if outcome is Outcome.GOAL:
-            self._emit(EventType.GOAL, team=attacking, player=shooter.player.id, related_event_id=shot.id)
+            self._emit(EventType.GOAL, team=attacking, player=shot.player, related_event_id=shot.id)
             self.score[attacking] += 1
             self._advance(45 + self.rng.uniform(0, 25))
             self._kickoff(defending)
         elif outcome is Outcome.ON_TARGET:
-            keeper = self._goalkeeper(defending)
             self._emit(
                 EventType.SAVE,
                 team=defending,
-                player=keeper,
+                player=self._goalkeeper(defending),
                 start=clamp_point(1.0, GOAL_Y + self.rng.gauss(0, 1.5)),
                 related_event_id=shot.id,
             )
@@ -524,8 +542,7 @@ class MatchEngine:
                 self.ball = clamp_point(start[0] - 8, start[1])
                 self.carrier = self._pick(attacking, zone(self.ball[0]))
             else:
-                blocker = self._pick(defending, "own")
-                self._emit(EventType.CLEARANCE, team=defending, player=blocker, start=flip(start))
+                self._emit(EventType.CLEARANCE, team=defending, player=self._pick(defending, "own"), start=flip(start))
                 self._turnover(start)
         else:
             self._advance(15 + self.rng.uniform(0, 10))

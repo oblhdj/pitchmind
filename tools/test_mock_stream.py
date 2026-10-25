@@ -1,4 +1,5 @@
-from mock_stream import FT_T, build_stream
+from mock_script import FT_T
+from mock_stream import build_stream
 from pitchmind_contracts import Insight, MatchEvent, Moment, Overlay, StatSnapshot, parse_wire
 
 

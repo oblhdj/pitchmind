@@ -86,7 +86,8 @@ DEMO = Scenario(
     second_half_s=DEMO_SECOND_HALF_S,
     lock_score=True,
     beats=(
-        Beat(_t1(9, 10), BeatKind.GOAL, A, "A9", assist="A10", pass_from=(62, 30), shot_from=(91, 31)),
+        # Shot positions give realistic xG: ~0.34, ~0.41, ~0.30, ~0.23 (pressured) and a 0.08 long-range winner.
+        Beat(_t1(9, 10), BeatKind.GOAL, A, "A9", assist="A10", pass_from=(62, 30), shot_from=(97, 36)),
         Beat(
             _t1(33, 4),
             BeatKind.SAVED_CHANCE,
@@ -94,10 +95,9 @@ DEMO = Scenario(
             "H10",
             assist="H7",
             pass_from=(80, 58),
-            shot_from=(93, 38),
-            under_pressure=True,
+            shot_from=(98, 35),
         ),
-        Beat(_t2(58, 20), BeatKind.MISSED_CHANCE, H, "H9", assist="H11", pass_from=(80, 50), shot_from=(94, 36)),
+        Beat(_t2(58, 20), BeatKind.MISSED_CHANCE, H, "H9", assist="H11", pass_from=(80, 50), shot_from=(96, 35)),
         Beat(
             _t2(61, 8),
             BeatKind.GOAL,
@@ -105,7 +105,7 @@ DEMO = Scenario(
             "H9",
             assist="H10",
             pass_from=(68, 36),
-            shot_from=(95, 33),
+            shot_from=(96, 33),
             under_pressure=True,
         ),
         Beat(_t2(72, 20), BeatKind.SPRINT, H, "H11", speed_kmh=35.2),
