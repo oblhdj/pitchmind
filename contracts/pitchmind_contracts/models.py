@@ -66,8 +66,13 @@ Point = Annotated[
     ],
     # Plain array form so TypeScript generators emit [number, number].
     WithJsonSchema(
-        {"type": "array", "items": {"type": "number", "minimum": 0}, "minItems": 2, "maxItems": 2,
-         "description": "[x, y] in metres, acting team attacks towards x = 105"}
+        {
+            "type": "array",
+            "items": {"type": "number", "minimum": 0},
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[x, y] in metres, acting team attacks towards x = 105",
+        }
     ),
 ]
 
@@ -185,8 +190,14 @@ class MatchEvent(ContractModel):
     @model_validator(mode="after")
     def _required_fields(self) -> Self:
         needs_actor = {
-            EventType.PASS, EventType.CARRY, EventType.SHOT, EventType.TACKLE,
-            EventType.INTERCEPTION, EventType.PRESSURE, EventType.SPRINT, EventType.GOAL,
+            EventType.PASS,
+            EventType.CARRY,
+            EventType.SHOT,
+            EventType.TACKLE,
+            EventType.INTERCEPTION,
+            EventType.PRESSURE,
+            EventType.SPRINT,
+            EventType.GOAL,
         }
         if self.type in needs_actor and (self.player is None or self.team is None):
             raise ValueError(f"{self.type} events need team and player")
@@ -195,7 +206,10 @@ class MatchEvent(ContractModel):
         if self.type is EventType.PASS and self.outcome not in {Outcome.SUCCESS, Outcome.FAILURE}:
             raise ValueError("pass outcome must be success or failure")
         if self.type is EventType.SHOT and self.outcome not in {
-            Outcome.ON_TARGET, Outcome.OFF_TARGET, Outcome.BLOCKED, Outcome.GOAL,
+            Outcome.ON_TARGET,
+            Outcome.OFF_TARGET,
+            Outcome.BLOCKED,
+            Outcome.GOAL,
         }:
             raise ValueError("shot outcome must be on_target, off_target, blocked or goal")
         if self.type is EventType.CARD and self.outcome not in {Outcome.YELLOW, Outcome.RED}:
@@ -254,9 +268,7 @@ class StatSnapshot(ContractModel):
     score: Score
     home: TeamStats
     away: TeamStats
-    momentum: Annotated[float, Field(ge=-1, le=1)] = Field(
-        description="-1 = away dominating, +1 = home dominating"
-    )
+    momentum: Annotated[float, Field(ge=-1, le=1)] = Field(description="-1 = away dominating, +1 = home dominating")
     control_chaos: Unit = Field(description="0 = calm, controlled; 1 = open, chaotic")
     rhythm_epm: Annotated[float, Field(ge=0)] = Field(description="Events per minute, last 5 min")
     players: list[PlayerStats]

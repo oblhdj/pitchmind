@@ -1,13 +1,20 @@
 # Workspace-level tooling config. Each service/package has its own pyproject.toml.
 
 [tool.ruff]
-line-length = 110
+line-length = 120
 target-version = "py312"
 extend-exclude = ["apps", "node_modules"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
 
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["contracts/pitchmind_contracts", "services/simulator/pitchmind_simulator", "tools"]
+mypy_path = "contracts,services/simulator,tools"
+explicit_package_bases = true
+
 [tool.pytest.ini_options]
-testpaths = ["contracts/tests", "tools"]
+testpaths = ["contracts/tests", "tools", "services/simulator/tests"]
 addopts = "-q"

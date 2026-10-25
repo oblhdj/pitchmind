@@ -1,0 +1,13 @@
+[project]
+name = "pitchmind-simulator"
+version = "0.1.0"
+description = "Synthetic football match simulator for PitchMind"
+requires-python = ">=3.12"
+dependencies = ["pitchmind-contracts"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["pitchmind_simulator"]

@@ -38,6 +38,7 @@ See [contracts/README.md](contracts/README.md) for the message formats and the m
 - [Implementation plan](docs/PLAN.pdf) ([LaTeX source](docs/PLAN.tex))
 - [Resources](docs/RESOURCES.md)
 - [Team split](docs/TEAM.md)
+- [Datasets & papers](docs/DATASETS_AND_PAPERS.md)
 
 ## Status
 

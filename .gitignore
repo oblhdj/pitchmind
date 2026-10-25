@@ -36,6 +36,7 @@ npm-debug.log*
 *.onnx
 data/video/
 data/raw/
+data/sim/
 
 # LaTeX build files (keep .tex and .pdf)
 *.aux
