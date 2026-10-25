@@ -82,10 +82,7 @@ _OVERRIDES: dict[str, dict[str, int]] = {
 
 def _attributes(pid: str, position: Position, rng: random.Random) -> PlayerAttributes:
     names = ("pace", "passing", "finishing", "dribbling", "defending", "stamina")
-    values = {
-        n: max(1, min(99, base + rng.randint(-6, 6)))
-        for n, base in zip(names, _PROFILES[position], strict=True)
-    }
+    values = {n: max(1, min(99, base + rng.randint(-6, 6))) for n, base in zip(names, _PROFILES[position], strict=True)}
     values.update(_OVERRIDES.get(pid, {}))
     return PlayerAttributes(**values)
 
@@ -129,12 +126,24 @@ def _team(
 def build_match_meta(match_id: str = "M001", seed: int = 7) -> MatchMeta:
     rng = random.Random(seed)
     home = _team(
-        HOME_SQUAD, side=TeamSide.HOME, team_id="north-city", name="North City FC", short_name="NCF",
-        colors=TeamColors(primary="#1F4E79", secondary="#FFFFFF"), formation="4-3-3", rng=rng,
+        HOME_SQUAD,
+        side=TeamSide.HOME,
+        team_id="north-city",
+        name="North City FC",
+        short_name="NCF",
+        colors=TeamColors(primary="#1F4E79", secondary="#FFFFFF"),
+        formation="4-3-3",
+        rng=rng,
     )
     away = _team(
-        AWAY_SQUAD, side=TeamSide.AWAY, team_id="harbour-united", name="Harbour United", short_name="HBU",
-        colors=TeamColors(primary="#C62828", secondary="#1A1A1A"), formation="4-2-3-1", rng=rng,
+        AWAY_SQUAD,
+        side=TeamSide.AWAY,
+        team_id="harbour-united",
+        name="Harbour United",
+        short_name="HBU",
+        colors=TeamColors(primary="#C62828", secondary="#1A1A1A"),
+        formation="4-2-3-1",
+        rng=rng,
     )
     return MatchMeta(
         match_id=match_id,

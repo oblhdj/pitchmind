@@ -29,6 +29,12 @@ py -3.12 -m venv .venv            # or any Python 3.12 interpreter
 .\.venv\Scripts\python.exe -m ruff check .                 # lint
 .\.venv\Scripts\python.exe -m pitchmind_contracts.generate # regenerate schemas + TS types
 .\.venv\Scripts\python.exe tools\mock_stream.py            # regenerate mock demo match
+.\.venv\Scripts\python.exe -m mypy                          # type-check (strict)
+
+# Pipeline so far
+.\.venv\Scripts\python.exe -m pitchmind_simulator                     # demo match -> data/sim/M001.jsonl
+.\.venv\Scripts\python.exe -m pitchmind_stats data/sim/M001.jsonl     # -> data/sim/M001.stats.jsonl
+.\.venv\Scripts\python.exe -m pitchmind_moments data/sim/M001.jsonl   # -> data/sim/M001.moments.jsonl
 ```
 
 See [contracts/README.md](contracts/README.md) for the message formats and the mock stream.
@@ -38,6 +44,7 @@ See [contracts/README.md](contracts/README.md) for the message formats and the m
 - [Implementation plan](docs/PLAN.pdf) ([LaTeX source](docs/PLAN.tex))
 - [Resources](docs/RESOURCES.md)
 - [Team split](docs/TEAM.md)
+- [Datasets & papers](docs/DATASETS_AND_PAPERS.md)
 
 ## Status
 

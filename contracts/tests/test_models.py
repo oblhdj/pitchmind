@@ -122,16 +122,29 @@ class TestInsight:
 def test_moment_requires_evidence() -> None:
     with pytest.raises(ValidationError):
         Moment(
-            id="m1", match_id="M001", t=10, minute=0, kind=MomentKind.GOAL,
-            importance=1, evidence=[], fallback_text="Goal!",
+            id="m1",
+            match_id="M001",
+            t=10,
+            minute=0,
+            kind=MomentKind.GOAL,
+            importance=1,
+            evidence=[],
+            fallback_text="Goal!",
         )
 
 
 def test_overlay_rtl_flag() -> None:
     overlay = Overlay(
-        overlay_id="ov-1", match_id="M001", show_at=1396, duration_s=6,
-        slot=OverlaySlot.LOWER_THIRD, priority=50, segment_key="casual|ar|club:*|player:*|metric:*",
-        language=Language.AR, title="الضغط يتصاعد", body="...",
+        overlay_id="ov-1",
+        match_id="M001",
+        show_at=1396,
+        duration_s=6,
+        slot=OverlaySlot.LOWER_THIRD,
+        priority=50,
+        segment_key="casual|ar|club:*|player:*|metric:*",
+        language=Language.AR,
+        title="الضغط يتصاعد",
+        body="...",
     )
     assert overlay.rtl is True
     assert overlay.model_dump()["rtl"] is True

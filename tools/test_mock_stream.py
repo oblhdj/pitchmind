@@ -1,4 +1,5 @@
-from mock_stream import FT_T, build_stream
+from mock_script import FT_T
+from mock_stream import build_stream
 from pitchmind_contracts import Insight, MatchEvent, Moment, Overlay, StatSnapshot, parse_wire
 
 
@@ -24,6 +25,7 @@ def test_stream_is_valid_ordered_and_grounded() -> None:
         assert set(moment.evidence) <= events.keys()
 
     for ins in insights:
+        assert ins.moment_id is not None
         moment = moments[ins.moment_id]
         for claim in ins.claims:
             assert set(claim.evidence) <= events.keys()

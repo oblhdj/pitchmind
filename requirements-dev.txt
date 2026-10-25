@@ -1,3 +1,8 @@
 -e ./contracts
+-e ./libs/football
+-e ./services/simulator
+-e ./services/stats-engine
+-e ./services/moment-detector
 pytest>=8
 ruff>=0.6
+mypy>=1.11

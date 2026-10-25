@@ -1,13 +1,37 @@
 # Workspace-level tooling config. Each service/package has its own pyproject.toml.
 
 [tool.ruff]
-line-length = 110
+line-length = 120
 target-version = "py312"
 extend-exclude = ["apps", "node_modules"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
 
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = [
+    "contracts/pitchmind_contracts",
+    "libs/football/pitchmind_football",
+    "services/simulator/pitchmind_simulator",
+    "services/stats-engine/pitchmind_stats",
+    "services/moment-detector/pitchmind_moments",
+    "tools",
+    "contracts/tests",
+    "services/simulator/tests",
+    "services/stats-engine/tests",
+    "services/moment-detector/tests",
+]
+mypy_path = "contracts,libs/football,services/simulator,services/stats-engine,services/moment-detector,tools"
+explicit_package_bases = true
+
 [tool.pytest.ini_options]
-testpaths = ["contracts/tests", "tools"]
+testpaths = [
+    "contracts/tests",
+    "tools",
+    "services/simulator/tests",
+    "services/stats-engine/tests",
+    "services/moment-detector/tests",
+]
 addopts = "-q"
