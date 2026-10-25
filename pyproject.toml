@@ -18,14 +18,20 @@ files = [
     "services/stats-engine/pitchmind_stats",
     "services/moment-detector/pitchmind_moments",
     "services/agents/pitchmind_agents",
+    "libs/bus/pitchmind_bus",
+    "services/render/pitchmind_render",
+    "services/runner/pitchmind_runner",
     "tools",
     "contracts/tests",
     "services/simulator/tests",
     "services/stats-engine/tests",
     "services/moment-detector/tests",
     "services/agents/tests",
+    "libs/bus/tests",
+    "services/render/tests",
+    "services/runner/tests",
 ]
-mypy_path = "contracts,libs/football,services/simulator,services/stats-engine,services/moment-detector,services/agents,tools"
+mypy_path = "contracts,libs/football,libs/bus,services/simulator,services/stats-engine,services/moment-detector,services/agents,services/render,services/runner,tools"
 explicit_package_bases = true
 
 [tool.pytest.ini_options]
@@ -36,5 +42,8 @@ testpaths = [
     "services/stats-engine/tests",
     "services/moment-detector/tests",
     "services/agents/tests",
+    "libs/bus/tests",
+    "services/render/tests",
+    "services/runner/tests",
 ]
 addopts = "-q"

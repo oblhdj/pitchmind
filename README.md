@@ -37,6 +37,22 @@ py -3.12 -m venv .venv            # or any Python 3.12 interpreter
 .\.venv\Scripts\python.exe -m pitchmind_moments data/sim/M001.jsonl   # -> data/sim/M001.moments.jsonl
 ```
 
+## Run it live (whole pipeline + frontend)
+
+```powershell
+# Terminal 1: simulator -> stats -> moments -> agents -> render -> WebSocket (ws://127.0.0.1:8765/ws)
+.\.venv\Scripts\python.exe -m pitchmind_runner --speed 10            # offline agents (mock model)
+.\.venv\Scripts\python.exe -m pitchmind_runner --speed 3 --llm foundry --env-file .env --record data/sim/demo.jsonl
+.\.venv\Scripts\python.exe -m pitchmind_runner --replay data/sim/demo.jsonl --speed 10   # replay a recorded match
+
+# Terminal 2: the frontend
+cd apps/web; npm install; npm run dev
+# open http://localhost:3000/?mode=live   (also /overlay?mode=live and /studio?mode=live)
+```
+
+`--disable narrative` kills an agent live for the failure-recovery demo: its insights fall back to the
+verified template text and the screen is never empty.
+
 See [contracts/README.md](contracts/README.md) for the message formats and the mock stream.
 
 ## Docs
