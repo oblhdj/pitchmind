@@ -1,0 +1,138 @@
+{
+  "$defs": {
+    "MomentKind": {
+      "enum": [
+        "goal",
+        "big_chance",
+        "save",
+        "momentum_swing",
+        "pressure_surge",
+        "control_shift",
+        "rhythm_change",
+        "speed_threshold",
+        "distance_milestone",
+        "milestone",
+        "card",
+        "substitution_impact",
+        "phase"
+      ],
+      "title": "MomentKind",
+      "type": "string"
+    },
+    "TeamSide": {
+      "enum": [
+        "home",
+        "away"
+      ],
+      "title": "TeamSide",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A moment that matters, detected by rules. Carries the facts the agents may use.",
+  "properties": {
+    "msg": {
+      "const": "moment",
+      "default": "moment",
+      "title": "Msg",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "match_id": {
+      "title": "Match Id",
+      "type": "string"
+    },
+    "t": {
+      "description": "Seconds of play since kick-off (continuous)",
+      "minimum": 0,
+      "title": "T",
+      "type": "number"
+    },
+    "minute": {
+      "maximum": 130,
+      "minimum": 0,
+      "title": "Minute",
+      "type": "integer"
+    },
+    "kind": {
+      "$ref": "#/$defs/MomentKind"
+    },
+    "importance": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Importance",
+      "type": "number"
+    },
+    "team": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TeamSide"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "players": {
+      "default": [],
+      "items": {
+        "examples": [
+          "H10",
+          "A1"
+        ],
+        "pattern": "^[HA]\\d{1,2}$",
+        "type": "string"
+      },
+      "title": "Players",
+      "type": "array"
+    },
+    "evidence": {
+      "items": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "minItems": 1,
+      "title": "Evidence",
+      "type": "array"
+    },
+    "metrics": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "description": "Facts agents may cite, e.g. {'pressure_index_before': 0.42, ...}",
+      "title": "Metrics",
+      "type": "object"
+    },
+    "fallback_text": {
+      "description": "Deterministic English sentence used if agents fail",
+      "title": "Fallback Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "msg",
+    "schema_version",
+    "id",
+    "match_id",
+    "t",
+    "minute",
+    "kind",
+    "importance",
+    "team",
+    "players",
+    "evidence",
+    "metrics",
+    "fallback_text"
+  ],
+  "title": "Moment",
+  "type": "object"
+}

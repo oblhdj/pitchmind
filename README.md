@@ -18,6 +18,21 @@ PitchMind ingests synthetic football events in real time, turns them into statis
 
 Microsoft Foundry · Microsoft Agent Framework · Azure Event Hubs · Azure Container Apps · Azure Functions · Azure Web PubSub · Azure Cosmos DB · Azure AI Search · Azure Static Web Apps · Application Insights · Key Vault
 
+## Development setup (Windows)
+
+Requires Python 3.12 and Node 20+.
+
+```powershell
+py -3.12 -m venv .venv            # or any Python 3.12 interpreter
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest                       # run tests
+.\.venv\Scripts\python.exe -m ruff check .                 # lint
+.\.venv\Scripts\python.exe -m pitchmind_contracts.generate # regenerate schemas + TS types
+.\.venv\Scripts\python.exe tools\mock_stream.py            # regenerate mock demo match
+```
+
+See [contracts/README.md](contracts/README.md) for the message formats and the mock stream.
+
 ## Docs
 
 - [Implementation plan](docs/PLAN.pdf) ([LaTeX source](docs/PLAN.tex))

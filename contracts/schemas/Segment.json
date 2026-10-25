@@ -1,0 +1,120 @@
+{
+  "$defs": {
+    "Language": {
+      "enum": [
+        "en",
+        "fr",
+        "ar",
+        "es"
+      ],
+      "title": "Language",
+      "type": "string"
+    },
+    "MetricName": {
+      "enum": [
+        "possession_pct",
+        "passes",
+        "pass_accuracy_pct",
+        "pass_difficulty",
+        "pass_distance_m",
+        "ball_speed_kmh",
+        "shot_speed_kmh",
+        "player_speed_kmh",
+        "distance_covered_m",
+        "sprints",
+        "shots",
+        "shots_on_target",
+        "xg",
+        "xt",
+        "tackles_won",
+        "pressure_index",
+        "momentum",
+        "control_chaos",
+        "rhythm_epm"
+      ],
+      "title": "MetricName",
+      "type": "string"
+    },
+    "Persona": {
+      "enum": [
+        "analyst",
+        "casual",
+        "beginner"
+      ],
+      "title": "Persona",
+      "type": "string"
+    },
+    "TeamSide": {
+      "enum": [
+        "home",
+        "away"
+      ],
+      "title": "TeamSide",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "An audience segment. Agents generate one insight variant per active segment.",
+  "properties": {
+    "persona": {
+      "$ref": "#/$defs/Persona"
+    },
+    "language": {
+      "$ref": "#/$defs/Language"
+    },
+    "club": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TeamSide"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "player": {
+      "anyOf": [
+        {
+          "examples": [
+            "H10",
+            "A1"
+          ],
+          "pattern": "^[HA]\\d{1,2}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Player"
+    },
+    "metric_focus": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MetricName"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "key": {
+      "readOnly": true,
+      "title": "Key",
+      "type": "string"
+    }
+  },
+  "required": [
+    "persona",
+    "language",
+    "club",
+    "player",
+    "metric_focus",
+    "key"
+  ],
+  "title": "Segment",
+  "type": "object"
+}

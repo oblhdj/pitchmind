@@ -1,0 +1,1533 @@
+{
+  "$defs": {
+    "AgentName": {
+      "enum": [
+        "orchestrator",
+        "explain",
+        "narrative",
+        "recap",
+        "persona",
+        "language",
+        "verifier",
+        "template"
+      ],
+      "title": "AgentName",
+      "type": "string"
+    },
+    "Claim": {
+      "additionalProperties": false,
+      "description": "One factual statement inside an insight, with the evidence that supports it.",
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "default": {},
+          "title": "Metrics",
+          "type": "object"
+        }
+      },
+      "required": [
+        "text",
+        "evidence",
+        "metrics"
+      ],
+      "title": "Claim",
+      "type": "object"
+    },
+    "EventSource": {
+      "enum": [
+        "sim",
+        "cv",
+        "replay"
+      ],
+      "title": "EventSource",
+      "type": "string"
+    },
+    "EventType": {
+      "enum": [
+        "pass",
+        "carry",
+        "shot",
+        "save",
+        "tackle",
+        "interception",
+        "clearance",
+        "pressure",
+        "foul",
+        "card",
+        "substitution",
+        "possession_change",
+        "goal",
+        "sprint",
+        "offside",
+        "phase_change"
+      ],
+      "title": "EventType",
+      "type": "string"
+    },
+    "FanProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "display_name": {
+          "title": "Display Name",
+          "type": "string"
+        },
+        "persona": {
+          "$ref": "#/$defs/Persona",
+          "default": "casual"
+        },
+        "language": {
+          "$ref": "#/$defs/Language",
+          "default": "en"
+        },
+        "club": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TeamSide"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "player": {
+          "anyOf": [
+            {
+              "examples": [
+                "H10",
+                "A1"
+              ],
+              "pattern": "^[HA]\\d{1,2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player"
+        },
+        "metric_focus": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MetricName"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id",
+        "display_name",
+        "persona",
+        "language",
+        "club",
+        "player",
+        "metric_focus"
+      ],
+      "title": "FanProfile",
+      "type": "object"
+    },
+    "Insight": {
+      "additionalProperties": false,
+      "properties": {
+        "msg": {
+          "const": "insight",
+          "default": "insight",
+          "title": "Msg",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "moment_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "None for recaps",
+          "title": "Moment Id"
+        },
+        "t": {
+          "description": "Seconds of play since kick-off (continuous)",
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        },
+        "kind": {
+          "$ref": "#/$defs/InsightKind"
+        },
+        "segment": {
+          "$ref": "#/$defs/Segment"
+        },
+        "headline": {
+          "maxLength": 90,
+          "title": "Headline",
+          "type": "string"
+        },
+        "body": {
+          "maxLength": 1500,
+          "title": "Body",
+          "type": "string"
+        },
+        "claims": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Claims",
+          "type": "array"
+        },
+        "verified": {
+          "description": "Passed the Verifier's evidence and number checks",
+          "title": "Verified",
+          "type": "boolean"
+        },
+        "fallback": {
+          "default": false,
+          "description": "Template text used instead of an LLM",
+          "title": "Fallback",
+          "type": "boolean"
+        },
+        "agent_trace": {
+          "description": "Agents that handled this insight, in order",
+          "items": {
+            "$ref": "#/$defs/AgentName"
+          },
+          "title": "Agent Trace",
+          "type": "array"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "latency_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latency Ms"
+        }
+      },
+      "required": [
+        "msg",
+        "schema_version",
+        "id",
+        "match_id",
+        "moment_id",
+        "t",
+        "kind",
+        "segment",
+        "headline",
+        "body",
+        "claims",
+        "verified",
+        "fallback",
+        "agent_trace",
+        "model",
+        "latency_ms"
+      ],
+      "title": "Insight",
+      "type": "object"
+    },
+    "InsightKind": {
+      "enum": [
+        "explanation",
+        "commentary",
+        "stat_alert",
+        "milestone",
+        "recap"
+      ],
+      "title": "InsightKind",
+      "type": "string"
+    },
+    "Language": {
+      "enum": [
+        "en",
+        "fr",
+        "ar",
+        "es"
+      ],
+      "title": "Language",
+      "type": "string"
+    },
+    "MatchEvent": {
+      "additionalProperties": false,
+      "description": "One raw on-ball or off-ball event. Produced by the simulator or CV module.",
+      "properties": {
+        "msg": {
+          "const": "match_event",
+          "default": "match_event",
+          "title": "Msg",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "id": {
+          "minimum": 0,
+          "title": "Id",
+          "type": "integer"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "t": {
+          "description": "Seconds of play since kick-off (continuous)",
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        },
+        "minute": {
+          "maximum": 130,
+          "minimum": 0,
+          "title": "Minute",
+          "type": "integer"
+        },
+        "phase": {
+          "$ref": "#/$defs/Phase"
+        },
+        "type": {
+          "$ref": "#/$defs/EventType"
+        },
+        "team": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TeamSide"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "player": {
+          "anyOf": [
+            {
+              "examples": [
+                "H10",
+                "A1"
+              ],
+              "pattern": "^[HA]\\d{1,2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player"
+        },
+        "receiver": {
+          "anyOf": [
+            {
+              "examples": [
+                "H10",
+                "A1"
+              ],
+              "pattern": "^[HA]\\d{1,2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Pass receiver, or the player coming on for a substitution",
+          "title": "Receiver"
+        },
+        "start": {
+          "anyOf": [
+            {
+              "description": "[x, y] in metres, acting team attacks towards x = 105",
+              "items": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start"
+        },
+        "end": {
+          "anyOf": [
+            {
+              "description": "[x, y] in metres, acting team attacks towards x = 105",
+              "items": {
+                "minimum": 0,
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Outcome"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "under_pressure": {
+          "default": false,
+          "title": "Under Pressure",
+          "type": "boolean"
+        },
+        "ball_speed_kmh": {
+          "anyOf": [
+            {
+              "maximum": 200,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ball Speed Kmh"
+        },
+        "player_speed_kmh": {
+          "anyOf": [
+            {
+              "maximum": 45,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Speed Kmh"
+        },
+        "distance_m": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Carry/sprint distance, or pass length if precomputed",
+          "title": "Distance M"
+        },
+        "related_event_id": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Related Event Id"
+        },
+        "source": {
+          "$ref": "#/$defs/EventSource",
+          "default": "sim"
+        }
+      },
+      "required": [
+        "msg",
+        "schema_version",
+        "id",
+        "match_id",
+        "t",
+        "minute",
+        "phase",
+        "type",
+        "team",
+        "player",
+        "receiver",
+        "start",
+        "end",
+        "outcome",
+        "under_pressure",
+        "ball_speed_kmh",
+        "player_speed_kmh",
+        "distance_m",
+        "related_event_id",
+        "source"
+      ],
+      "title": "MatchEvent",
+      "type": "object"
+    },
+    "MatchMeta": {
+      "additionalProperties": false,
+      "properties": {
+        "msg": {
+          "const": "match_meta",
+          "default": "match_meta",
+          "title": "Msg",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "competition": {
+          "title": "Competition",
+          "type": "string"
+        },
+        "venue": {
+          "title": "Venue",
+          "type": "string"
+        },
+        "kickoff": {
+          "format": "date-time",
+          "title": "Kickoff",
+          "type": "string"
+        },
+        "seed": {
+          "title": "Seed",
+          "type": "integer"
+        },
+        "home": {
+          "$ref": "#/$defs/Team"
+        },
+        "away": {
+          "$ref": "#/$defs/Team"
+        }
+      },
+      "required": [
+        "msg",
+        "schema_version",
+        "match_id",
+        "competition",
+        "venue",
+        "kickoff",
+        "seed",
+        "home",
+        "away"
+      ],
+      "title": "MatchMeta",
+      "type": "object"
+    },
+    "MetricName": {
+      "enum": [
+        "possession_pct",
+        "passes",
+        "pass_accuracy_pct",
+        "pass_difficulty",
+        "pass_distance_m",
+        "ball_speed_kmh",
+        "shot_speed_kmh",
+        "player_speed_kmh",
+        "distance_covered_m",
+        "sprints",
+        "shots",
+        "shots_on_target",
+        "xg",
+        "xt",
+        "tackles_won",
+        "pressure_index",
+        "momentum",
+        "control_chaos",
+        "rhythm_epm"
+      ],
+      "title": "MetricName",
+      "type": "string"
+    },
+    "Moment": {
+      "additionalProperties": false,
+      "description": "A moment that matters, detected by rules. Carries the facts the agents may use.",
+      "properties": {
+        "msg": {
+          "const": "moment",
+          "default": "moment",
+          "title": "Msg",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "t": {
+          "description": "Seconds of play since kick-off (continuous)",
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        },
+        "minute": {
+          "maximum": 130,
+          "minimum": 0,
+          "title": "Minute",
+          "type": "integer"
+        },
+        "kind": {
+          "$ref": "#/$defs/MomentKind"
+        },
+        "importance": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Importance",
+          "type": "number"
+        },
+        "team": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TeamSide"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "players": {
+          "default": [],
+          "items": {
+            "examples": [
+              "H10",
+              "A1"
+            ],
+            "pattern": "^[HA]\\d{1,2}$",
+            "type": "string"
+          },
+          "title": "Players",
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Facts agents may cite, e.g. {'pressure_index_before': 0.42, ...}",
+          "title": "Metrics",
+          "type": "object"
+        },
+        "fallback_text": {
+          "description": "Deterministic English sentence used if agents fail",
+          "title": "Fallback Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "msg",
+        "schema_version",
+        "id",
+        "match_id",
+        "t",
+        "minute",
+        "kind",
+        "importance",
+        "team",
+        "players",
+        "evidence",
+        "metrics",
+        "fallback_text"
+      ],
+      "title": "Moment",
+      "type": "object"
+    },
+    "MomentKind": {
+      "enum": [
+        "goal",
+        "big_chance",
+        "save",
+        "momentum_swing",
+        "pressure_surge",
+        "control_shift",
+        "rhythm_change",
+        "speed_threshold",
+        "distance_milestone",
+        "milestone",
+        "card",
+        "substitution_impact",
+        "phase"
+      ],
+      "title": "MomentKind",
+      "type": "string"
+    },
+    "Outcome": {
+      "enum": [
+        "success",
+        "failure",
+        "on_target",
+        "off_target",
+        "blocked",
+        "goal",
+        "yellow",
+        "red"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "Overlay": {
+      "additionalProperties": false,
+      "description": "A timed graphic for the broadcast overlay page or the second-screen app.",
+      "properties": {
+        "msg": {
+          "const": "overlay",
+          "default": "overlay",
+          "title": "Msg",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "overlay_id": {
+          "title": "Overlay Id",
+          "type": "string"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "insight_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Insight Id"
+        },
+        "show_at": {
+          "description": "Seconds of play since kick-off (continuous)",
+          "minimum": 0,
+          "title": "Show At",
+          "type": "number"
+        },
+        "duration_s": {
+          "exclusiveMinimum": 0,
+          "maximum": 60,
+          "title": "Duration S",
+          "type": "number"
+        },
+        "slot": {
+          "$ref": "#/$defs/OverlaySlot"
+        },
+        "priority": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "segment_key": {
+          "title": "Segment Key",
+          "type": "string"
+        },
+        "language": {
+          "$ref": "#/$defs/Language"
+        },
+        "title": {
+          "maxLength": 60,
+          "title": "Title",
+          "type": "string"
+        },
+        "body": {
+          "maxLength": 600,
+          "title": "Body",
+          "type": "string"
+        },
+        "team": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TeamSide"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "player_id": {
+          "anyOf": [
+            {
+              "examples": [
+                "H10",
+                "A1"
+              ],
+              "pattern": "^[HA]\\d{1,2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player Id"
+        },
+        "metric": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OverlayMetric"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "evidence": {
+          "default": [],
+          "items": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "rtl": {
+          "readOnly": true,
+          "title": "Rtl",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "msg",
+        "schema_version",
+        "overlay_id",
+        "match_id",
+        "insight_id",
+        "show_at",
+        "duration_s",
+        "slot",
+        "priority",
+        "segment_key",
+        "language",
+        "title",
+        "body",
+        "team",
+        "player_id",
+        "metric",
+        "evidence",
+        "rtl"
+      ],
+      "title": "Overlay",
+      "type": "object"
+    },
+    "OverlayMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/MetricName"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "unit",
+        "label"
+      ],
+      "title": "OverlayMetric",
+      "type": "object"
+    },
+    "OverlaySlot": {
+      "enum": [
+        "lower_third",
+        "player_tag",
+        "stat_bubble",
+        "ticker",
+        "recap_card"
+      ],
+      "title": "OverlaySlot",
+      "type": "string"
+    },
+    "Persona": {
+      "enum": [
+        "analyst",
+        "casual",
+        "beginner"
+      ],
+      "title": "Persona",
+      "type": "string"
+    },
+    "Phase": {
+      "enum": [
+        "pre_match",
+        "first_half",
+        "half_time",
+        "second_half",
+        "full_time"
+      ],
+      "title": "Phase",
+      "type": "string"
+    },
+    "Player": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "examples": [
+            "H10",
+            "A1"
+          ],
+          "pattern": "^[HA]\\d{1,2}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "short_name": {
+          "title": "Short Name",
+          "type": "string"
+        },
+        "number": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Number",
+          "type": "integer"
+        },
+        "position": {
+          "$ref": "#/$defs/Position"
+        },
+        "nationality": {
+          "title": "Nationality",
+          "type": "string"
+        },
+        "attributes": {
+          "$ref": "#/$defs/PlayerAttributes"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "short_name",
+        "number",
+        "position",
+        "nationality",
+        "attributes"
+      ],
+      "title": "Player",
+      "type": "object"
+    },
+    "PlayerAttributes": {
+      "additionalProperties": false,
+      "properties": {
+        "pace": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Pace",
+          "type": "integer"
+        },
+        "passing": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Passing",
+          "type": "integer"
+        },
+        "finishing": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Finishing",
+          "type": "integer"
+        },
+        "dribbling": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Dribbling",
+          "type": "integer"
+        },
+        "defending": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Defending",
+          "type": "integer"
+        },
+        "stamina": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Stamina",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pace",
+        "passing",
+        "finishing",
+        "dribbling",
+        "defending",
+        "stamina"
+      ],
+      "title": "PlayerAttributes",
+      "type": "object"
+    },
+    "PlayerStats": {
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "examples": [
+            "H10",
+            "A1"
+          ],
+          "pattern": "^[HA]\\d{1,2}$",
+          "title": "Player Id",
+          "type": "string"
+        },
+        "team": {
+          "$ref": "#/$defs/TeamSide"
+        },
+        "touches": {
+          "minimum": 0,
+          "title": "Touches",
+          "type": "integer"
+        },
+        "passes": {
+          "minimum": 0,
+          "title": "Passes",
+          "type": "integer"
+        },
+        "pass_accuracy_pct": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Pass Accuracy Pct",
+          "type": "number"
+        },
+        "shots": {
+          "minimum": 0,
+          "title": "Shots",
+          "type": "integer"
+        },
+        "xg": {
+          "minimum": 0,
+          "title": "Xg",
+          "type": "number"
+        },
+        "tackles_won": {
+          "minimum": 0,
+          "title": "Tackles Won",
+          "type": "integer"
+        },
+        "distance_covered_m": {
+          "minimum": 0,
+          "title": "Distance Covered M",
+          "type": "number"
+        },
+        "top_speed_kmh": {
+          "maximum": 45,
+          "minimum": 0,
+          "title": "Top Speed Kmh",
+          "type": "number"
+        },
+        "sprints": {
+          "minimum": 0,
+          "title": "Sprints",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "player_id",
+        "team",
+        "touches",
+        "passes",
+        "pass_accuracy_pct",
+        "shots",
+        "xg",
+        "tackles_won",
+        "distance_covered_m",
+        "top_speed_kmh",
+        "sprints"
+      ],
+      "title": "PlayerStats",
+      "type": "object"
+    },
+    "Position": {
+      "enum": [
+        "GK",
+        "CB",
+        "FB",
+        "DM",
+        "CM",
+        "AM",
+        "W",
+        "ST"
+      ],
+      "title": "Position",
+      "type": "string"
+    },
+    "Score": {
+      "additionalProperties": false,
+      "properties": {
+        "home": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Home",
+          "type": "integer"
+        },
+        "away": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Away",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "home",
+        "away"
+      ],
+      "title": "Score",
+      "type": "object"
+    },
+    "Segment": {
+      "additionalProperties": false,
+      "description": "An audience segment. Agents generate one insight variant per active segment.",
+      "properties": {
+        "persona": {
+          "$ref": "#/$defs/Persona"
+        },
+        "language": {
+          "$ref": "#/$defs/Language"
+        },
+        "club": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TeamSide"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "player": {
+          "anyOf": [
+            {
+              "examples": [
+                "H10",
+                "A1"
+              ],
+              "pattern": "^[HA]\\d{1,2}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player"
+        },
+        "metric_focus": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MetricName"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "key": {
+          "readOnly": true,
+          "title": "Key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "persona",
+        "language",
+        "club",
+        "player",
+        "metric_focus",
+        "key"
+      ],
+      "title": "Segment",
+      "type": "object"
+    },
+    "StatSnapshot": {
+      "additionalProperties": false,
+      "description": "Full statistical state of the match, published on every meaningful change.",
+      "properties": {
+        "msg": {
+          "const": "stat_snapshot",
+          "default": "stat_snapshot",
+          "title": "Msg",
+          "type": "string"
+        },
+        "schema_version": {
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "match_id": {
+          "title": "Match Id",
+          "type": "string"
+        },
+        "t": {
+          "description": "Seconds of play since kick-off (continuous)",
+          "minimum": 0,
+          "title": "T",
+          "type": "number"
+        },
+        "minute": {
+          "maximum": 130,
+          "minimum": 0,
+          "title": "Minute",
+          "type": "integer"
+        },
+        "phase": {
+          "$ref": "#/$defs/Phase"
+        },
+        "last_event_id": {
+          "minimum": 0,
+          "title": "Last Event Id",
+          "type": "integer"
+        },
+        "score": {
+          "$ref": "#/$defs/Score"
+        },
+        "home": {
+          "$ref": "#/$defs/TeamStats"
+        },
+        "away": {
+          "$ref": "#/$defs/TeamStats"
+        },
+        "momentum": {
+          "description": "-1 = away dominating, +1 = home dominating",
+          "maximum": 1,
+          "minimum": -1,
+          "title": "Momentum",
+          "type": "number"
+        },
+        "control_chaos": {
+          "description": "0 = calm, controlled; 1 = open, chaotic",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Control Chaos",
+          "type": "number"
+        },
+        "rhythm_epm": {
+          "description": "Events per minute, last 5 min",
+          "minimum": 0,
+          "title": "Rhythm Epm",
+          "type": "number"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/PlayerStats"
+          },
+          "title": "Players",
+          "type": "array"
+        }
+      },
+      "required": [
+        "msg",
+        "schema_version",
+        "match_id",
+        "t",
+        "minute",
+        "phase",
+        "last_event_id",
+        "score",
+        "home",
+        "away",
+        "momentum",
+        "control_chaos",
+        "rhythm_epm",
+        "players"
+      ],
+      "title": "StatSnapshot",
+      "type": "object"
+    },
+    "Team": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "short_name": {
+          "maxLength": 4,
+          "minLength": 2,
+          "title": "Short Name",
+          "type": "string"
+        },
+        "side": {
+          "$ref": "#/$defs/TeamSide"
+        },
+        "colors": {
+          "$ref": "#/$defs/TeamColors"
+        },
+        "formation": {
+          "examples": [
+            "4-3-3"
+          ],
+          "pattern": "^\\d(-\\d){2,4}$",
+          "title": "Formation",
+          "type": "string"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/Player"
+          },
+          "title": "Players",
+          "type": "array"
+        },
+        "starting_xi": {
+          "items": {
+            "examples": [
+              "H10",
+              "A1"
+            ],
+            "pattern": "^[HA]\\d{1,2}$",
+            "type": "string"
+          },
+          "maxItems": 11,
+          "minItems": 11,
+          "title": "Starting Xi",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "short_name",
+        "side",
+        "colors",
+        "formation",
+        "players",
+        "starting_xi"
+      ],
+      "title": "Team",
+      "type": "object"
+    },
+    "TeamColors": {
+      "additionalProperties": false,
+      "properties": {
+        "primary": {
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "title": "Primary",
+          "type": "string"
+        },
+        "secondary": {
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "title": "Secondary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "primary",
+        "secondary"
+      ],
+      "title": "TeamColors",
+      "type": "object"
+    },
+    "TeamSide": {
+      "enum": [
+        "home",
+        "away"
+      ],
+      "title": "TeamSide",
+      "type": "string"
+    },
+    "TeamStats": {
+      "additionalProperties": false,
+      "properties": {
+        "possession_pct": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Possession Pct",
+          "type": "number"
+        },
+        "passes": {
+          "minimum": 0,
+          "title": "Passes",
+          "type": "integer"
+        },
+        "pass_accuracy_pct": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Pass Accuracy Pct",
+          "type": "number"
+        },
+        "avg_pass_difficulty": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Avg Pass Difficulty",
+          "type": "number"
+        },
+        "shots": {
+          "minimum": 0,
+          "title": "Shots",
+          "type": "integer"
+        },
+        "shots_on_target": {
+          "minimum": 0,
+          "title": "Shots On Target",
+          "type": "integer"
+        },
+        "xg": {
+          "minimum": 0,
+          "title": "Xg",
+          "type": "number"
+        },
+        "xt": {
+          "title": "Xt",
+          "type": "number"
+        },
+        "tackles_won": {
+          "minimum": 0,
+          "title": "Tackles Won",
+          "type": "integer"
+        },
+        "pressure_index": {
+          "description": "Rolling 5-min pressure applied in the opponent half",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Pressure Index",
+          "type": "number"
+        },
+        "distance_covered_m": {
+          "minimum": 0,
+          "title": "Distance Covered M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "possession_pct",
+        "passes",
+        "pass_accuracy_pct",
+        "avg_pass_difficulty",
+        "shots",
+        "shots_on_target",
+        "xg",
+        "xt",
+        "tackles_won",
+        "pressure_index",
+        "distance_covered_m"
+      ],
+      "title": "TeamStats",
+      "type": "object"
+    }
+  },
+  "title": "PitchMindContracts",
+  "$comment": "Generated from pitchmind_contracts, schema_version 1.0"
+}

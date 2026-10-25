@@ -1,0 +1,250 @@
+{
+  "$defs": {
+    "Language": {
+      "enum": [
+        "en",
+        "fr",
+        "ar",
+        "es"
+      ],
+      "title": "Language",
+      "type": "string"
+    },
+    "MetricName": {
+      "enum": [
+        "possession_pct",
+        "passes",
+        "pass_accuracy_pct",
+        "pass_difficulty",
+        "pass_distance_m",
+        "ball_speed_kmh",
+        "shot_speed_kmh",
+        "player_speed_kmh",
+        "distance_covered_m",
+        "sprints",
+        "shots",
+        "shots_on_target",
+        "xg",
+        "xt",
+        "tackles_won",
+        "pressure_index",
+        "momentum",
+        "control_chaos",
+        "rhythm_epm"
+      ],
+      "title": "MetricName",
+      "type": "string"
+    },
+    "OverlayMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/MetricName"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "unit",
+        "label"
+      ],
+      "title": "OverlayMetric",
+      "type": "object"
+    },
+    "OverlaySlot": {
+      "enum": [
+        "lower_third",
+        "player_tag",
+        "stat_bubble",
+        "ticker",
+        "recap_card"
+      ],
+      "title": "OverlaySlot",
+      "type": "string"
+    },
+    "TeamSide": {
+      "enum": [
+        "home",
+        "away"
+      ],
+      "title": "TeamSide",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A timed graphic for the broadcast overlay page or the second-screen app.",
+  "properties": {
+    "msg": {
+      "const": "overlay",
+      "default": "overlay",
+      "title": "Msg",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "overlay_id": {
+      "title": "Overlay Id",
+      "type": "string"
+    },
+    "match_id": {
+      "title": "Match Id",
+      "type": "string"
+    },
+    "insight_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Insight Id"
+    },
+    "show_at": {
+      "description": "Seconds of play since kick-off (continuous)",
+      "minimum": 0,
+      "title": "Show At",
+      "type": "number"
+    },
+    "duration_s": {
+      "exclusiveMinimum": 0,
+      "maximum": 60,
+      "title": "Duration S",
+      "type": "number"
+    },
+    "slot": {
+      "$ref": "#/$defs/OverlaySlot"
+    },
+    "priority": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Priority",
+      "type": "integer"
+    },
+    "segment_key": {
+      "title": "Segment Key",
+      "type": "string"
+    },
+    "language": {
+      "$ref": "#/$defs/Language"
+    },
+    "title": {
+      "maxLength": 60,
+      "title": "Title",
+      "type": "string"
+    },
+    "body": {
+      "maxLength": 600,
+      "title": "Body",
+      "type": "string"
+    },
+    "team": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TeamSide"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "player_id": {
+      "anyOf": [
+        {
+          "examples": [
+            "H10",
+            "A1"
+          ],
+          "pattern": "^[HA]\\d{1,2}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Player Id"
+    },
+    "metric": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/OverlayMetric"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "evidence": {
+      "default": [],
+      "items": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "title": "Evidence",
+      "type": "array"
+    },
+    "rtl": {
+      "readOnly": true,
+      "title": "Rtl",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "msg",
+    "schema_version",
+    "overlay_id",
+    "match_id",
+    "insight_id",
+    "show_at",
+    "duration_s",
+    "slot",
+    "priority",
+    "segment_key",
+    "language",
+    "title",
+    "body",
+    "team",
+    "player_id",
+    "metric",
+    "evidence",
+    "rtl"
+  ],
+  "title": "Overlay",
+  "type": "object"
+}

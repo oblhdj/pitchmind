@@ -1,0 +1,297 @@
+{
+  "$defs": {
+    "Phase": {
+      "enum": [
+        "pre_match",
+        "first_half",
+        "half_time",
+        "second_half",
+        "full_time"
+      ],
+      "title": "Phase",
+      "type": "string"
+    },
+    "PlayerStats": {
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "examples": [
+            "H10",
+            "A1"
+          ],
+          "pattern": "^[HA]\\d{1,2}$",
+          "title": "Player Id",
+          "type": "string"
+        },
+        "team": {
+          "$ref": "#/$defs/TeamSide"
+        },
+        "touches": {
+          "minimum": 0,
+          "title": "Touches",
+          "type": "integer"
+        },
+        "passes": {
+          "minimum": 0,
+          "title": "Passes",
+          "type": "integer"
+        },
+        "pass_accuracy_pct": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Pass Accuracy Pct",
+          "type": "number"
+        },
+        "shots": {
+          "minimum": 0,
+          "title": "Shots",
+          "type": "integer"
+        },
+        "xg": {
+          "minimum": 0,
+          "title": "Xg",
+          "type": "number"
+        },
+        "tackles_won": {
+          "minimum": 0,
+          "title": "Tackles Won",
+          "type": "integer"
+        },
+        "distance_covered_m": {
+          "minimum": 0,
+          "title": "Distance Covered M",
+          "type": "number"
+        },
+        "top_speed_kmh": {
+          "maximum": 45,
+          "minimum": 0,
+          "title": "Top Speed Kmh",
+          "type": "number"
+        },
+        "sprints": {
+          "minimum": 0,
+          "title": "Sprints",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "player_id",
+        "team",
+        "touches",
+        "passes",
+        "pass_accuracy_pct",
+        "shots",
+        "xg",
+        "tackles_won",
+        "distance_covered_m",
+        "top_speed_kmh",
+        "sprints"
+      ],
+      "title": "PlayerStats",
+      "type": "object"
+    },
+    "Score": {
+      "additionalProperties": false,
+      "properties": {
+        "home": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Home",
+          "type": "integer"
+        },
+        "away": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Away",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "home",
+        "away"
+      ],
+      "title": "Score",
+      "type": "object"
+    },
+    "TeamSide": {
+      "enum": [
+        "home",
+        "away"
+      ],
+      "title": "TeamSide",
+      "type": "string"
+    },
+    "TeamStats": {
+      "additionalProperties": false,
+      "properties": {
+        "possession_pct": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Possession Pct",
+          "type": "number"
+        },
+        "passes": {
+          "minimum": 0,
+          "title": "Passes",
+          "type": "integer"
+        },
+        "pass_accuracy_pct": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Pass Accuracy Pct",
+          "type": "number"
+        },
+        "avg_pass_difficulty": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Avg Pass Difficulty",
+          "type": "number"
+        },
+        "shots": {
+          "minimum": 0,
+          "title": "Shots",
+          "type": "integer"
+        },
+        "shots_on_target": {
+          "minimum": 0,
+          "title": "Shots On Target",
+          "type": "integer"
+        },
+        "xg": {
+          "minimum": 0,
+          "title": "Xg",
+          "type": "number"
+        },
+        "xt": {
+          "title": "Xt",
+          "type": "number"
+        },
+        "tackles_won": {
+          "minimum": 0,
+          "title": "Tackles Won",
+          "type": "integer"
+        },
+        "pressure_index": {
+          "description": "Rolling 5-min pressure applied in the opponent half",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Pressure Index",
+          "type": "number"
+        },
+        "distance_covered_m": {
+          "minimum": 0,
+          "title": "Distance Covered M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "possession_pct",
+        "passes",
+        "pass_accuracy_pct",
+        "avg_pass_difficulty",
+        "shots",
+        "shots_on_target",
+        "xg",
+        "xt",
+        "tackles_won",
+        "pressure_index",
+        "distance_covered_m"
+      ],
+      "title": "TeamStats",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Full statistical state of the match, published on every meaningful change.",
+  "properties": {
+    "msg": {
+      "const": "stat_snapshot",
+      "default": "stat_snapshot",
+      "title": "Msg",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "match_id": {
+      "title": "Match Id",
+      "type": "string"
+    },
+    "t": {
+      "description": "Seconds of play since kick-off (continuous)",
+      "minimum": 0,
+      "title": "T",
+      "type": "number"
+    },
+    "minute": {
+      "maximum": 130,
+      "minimum": 0,
+      "title": "Minute",
+      "type": "integer"
+    },
+    "phase": {
+      "$ref": "#/$defs/Phase"
+    },
+    "last_event_id": {
+      "minimum": 0,
+      "title": "Last Event Id",
+      "type": "integer"
+    },
+    "score": {
+      "$ref": "#/$defs/Score"
+    },
+    "home": {
+      "$ref": "#/$defs/TeamStats"
+    },
+    "away": {
+      "$ref": "#/$defs/TeamStats"
+    },
+    "momentum": {
+      "description": "-1 = away dominating, +1 = home dominating",
+      "maximum": 1,
+      "minimum": -1,
+      "title": "Momentum",
+      "type": "number"
+    },
+    "control_chaos": {
+      "description": "0 = calm, controlled; 1 = open, chaotic",
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Control Chaos",
+      "type": "number"
+    },
+    "rhythm_epm": {
+      "description": "Events per minute, last 5 min",
+      "minimum": 0,
+      "title": "Rhythm Epm",
+      "type": "number"
+    },
+    "players": {
+      "items": {
+        "$ref": "#/$defs/PlayerStats"
+      },
+      "title": "Players",
+      "type": "array"
+    }
+  },
+  "required": [
+    "msg",
+    "schema_version",
+    "match_id",
+    "t",
+    "minute",
+    "phase",
+    "last_event_id",
+    "score",
+    "home",
+    "away",
+    "momentum",
+    "control_chaos",
+    "rhythm_epm",
+    "players"
+  ],
+  "title": "StatSnapshot",
+  "type": "object"
+}

@@ -1,0 +1,267 @@
+{
+  "$defs": {
+    "Player": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "examples": [
+            "H10",
+            "A1"
+          ],
+          "pattern": "^[HA]\\d{1,2}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "short_name": {
+          "title": "Short Name",
+          "type": "string"
+        },
+        "number": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Number",
+          "type": "integer"
+        },
+        "position": {
+          "$ref": "#/$defs/Position"
+        },
+        "nationality": {
+          "title": "Nationality",
+          "type": "string"
+        },
+        "attributes": {
+          "$ref": "#/$defs/PlayerAttributes"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "short_name",
+        "number",
+        "position",
+        "nationality",
+        "attributes"
+      ],
+      "title": "Player",
+      "type": "object"
+    },
+    "PlayerAttributes": {
+      "additionalProperties": false,
+      "properties": {
+        "pace": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Pace",
+          "type": "integer"
+        },
+        "passing": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Passing",
+          "type": "integer"
+        },
+        "finishing": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Finishing",
+          "type": "integer"
+        },
+        "dribbling": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Dribbling",
+          "type": "integer"
+        },
+        "defending": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Defending",
+          "type": "integer"
+        },
+        "stamina": {
+          "maximum": 99,
+          "minimum": 1,
+          "title": "Stamina",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pace",
+        "passing",
+        "finishing",
+        "dribbling",
+        "defending",
+        "stamina"
+      ],
+      "title": "PlayerAttributes",
+      "type": "object"
+    },
+    "Position": {
+      "enum": [
+        "GK",
+        "CB",
+        "FB",
+        "DM",
+        "CM",
+        "AM",
+        "W",
+        "ST"
+      ],
+      "title": "Position",
+      "type": "string"
+    },
+    "Team": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "short_name": {
+          "maxLength": 4,
+          "minLength": 2,
+          "title": "Short Name",
+          "type": "string"
+        },
+        "side": {
+          "$ref": "#/$defs/TeamSide"
+        },
+        "colors": {
+          "$ref": "#/$defs/TeamColors"
+        },
+        "formation": {
+          "examples": [
+            "4-3-3"
+          ],
+          "pattern": "^\\d(-\\d){2,4}$",
+          "title": "Formation",
+          "type": "string"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/Player"
+          },
+          "title": "Players",
+          "type": "array"
+        },
+        "starting_xi": {
+          "items": {
+            "examples": [
+              "H10",
+              "A1"
+            ],
+            "pattern": "^[HA]\\d{1,2}$",
+            "type": "string"
+          },
+          "maxItems": 11,
+          "minItems": 11,
+          "title": "Starting Xi",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "short_name",
+        "side",
+        "colors",
+        "formation",
+        "players",
+        "starting_xi"
+      ],
+      "title": "Team",
+      "type": "object"
+    },
+    "TeamColors": {
+      "additionalProperties": false,
+      "properties": {
+        "primary": {
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "title": "Primary",
+          "type": "string"
+        },
+        "secondary": {
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "title": "Secondary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "primary",
+        "secondary"
+      ],
+      "title": "TeamColors",
+      "type": "object"
+    },
+    "TeamSide": {
+      "enum": [
+        "home",
+        "away"
+      ],
+      "title": "TeamSide",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "msg": {
+      "const": "match_meta",
+      "default": "match_meta",
+      "title": "Msg",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "match_id": {
+      "title": "Match Id",
+      "type": "string"
+    },
+    "competition": {
+      "title": "Competition",
+      "type": "string"
+    },
+    "venue": {
+      "title": "Venue",
+      "type": "string"
+    },
+    "kickoff": {
+      "format": "date-time",
+      "title": "Kickoff",
+      "type": "string"
+    },
+    "seed": {
+      "title": "Seed",
+      "type": "integer"
+    },
+    "home": {
+      "$ref": "#/$defs/Team"
+    },
+    "away": {
+      "$ref": "#/$defs/Team"
+    }
+  },
+  "required": [
+    "msg",
+    "schema_version",
+    "match_id",
+    "competition",
+    "venue",
+    "kickoff",
+    "seed",
+    "home",
+    "away"
+  ],
+  "title": "MatchMeta",
+  "type": "object"
+}

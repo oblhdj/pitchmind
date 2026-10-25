@@ -1,0 +1,293 @@
+{
+  "$defs": {
+    "EventSource": {
+      "enum": [
+        "sim",
+        "cv",
+        "replay"
+      ],
+      "title": "EventSource",
+      "type": "string"
+    },
+    "EventType": {
+      "enum": [
+        "pass",
+        "carry",
+        "shot",
+        "save",
+        "tackle",
+        "interception",
+        "clearance",
+        "pressure",
+        "foul",
+        "card",
+        "substitution",
+        "possession_change",
+        "goal",
+        "sprint",
+        "offside",
+        "phase_change"
+      ],
+      "title": "EventType",
+      "type": "string"
+    },
+    "Outcome": {
+      "enum": [
+        "success",
+        "failure",
+        "on_target",
+        "off_target",
+        "blocked",
+        "goal",
+        "yellow",
+        "red"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "Phase": {
+      "enum": [
+        "pre_match",
+        "first_half",
+        "half_time",
+        "second_half",
+        "full_time"
+      ],
+      "title": "Phase",
+      "type": "string"
+    },
+    "TeamSide": {
+      "enum": [
+        "home",
+        "away"
+      ],
+      "title": "TeamSide",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One raw on-ball or off-ball event. Produced by the simulator or CV module.",
+  "properties": {
+    "msg": {
+      "const": "match_event",
+      "default": "match_event",
+      "title": "Msg",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "id": {
+      "minimum": 0,
+      "title": "Id",
+      "type": "integer"
+    },
+    "match_id": {
+      "title": "Match Id",
+      "type": "string"
+    },
+    "t": {
+      "description": "Seconds of play since kick-off (continuous)",
+      "minimum": 0,
+      "title": "T",
+      "type": "number"
+    },
+    "minute": {
+      "maximum": 130,
+      "minimum": 0,
+      "title": "Minute",
+      "type": "integer"
+    },
+    "phase": {
+      "$ref": "#/$defs/Phase"
+    },
+    "type": {
+      "$ref": "#/$defs/EventType"
+    },
+    "team": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TeamSide"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "player": {
+      "anyOf": [
+        {
+          "examples": [
+            "H10",
+            "A1"
+          ],
+          "pattern": "^[HA]\\d{1,2}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Player"
+    },
+    "receiver": {
+      "anyOf": [
+        {
+          "examples": [
+            "H10",
+            "A1"
+          ],
+          "pattern": "^[HA]\\d{1,2}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Pass receiver, or the player coming on for a substitution",
+      "title": "Receiver"
+    },
+    "start": {
+      "anyOf": [
+        {
+          "description": "[x, y] in metres, acting team attacks towards x = 105",
+          "items": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Start"
+    },
+    "end": {
+      "anyOf": [
+        {
+          "description": "[x, y] in metres, acting team attacks towards x = 105",
+          "items": {
+            "minimum": 0,
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "End"
+    },
+    "outcome": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Outcome"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "under_pressure": {
+      "default": false,
+      "title": "Under Pressure",
+      "type": "boolean"
+    },
+    "ball_speed_kmh": {
+      "anyOf": [
+        {
+          "maximum": 200,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Ball Speed Kmh"
+    },
+    "player_speed_kmh": {
+      "anyOf": [
+        {
+          "maximum": 45,
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Player Speed Kmh"
+    },
+    "distance_m": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Carry/sprint distance, or pass length if precomputed",
+      "title": "Distance M"
+    },
+    "related_event_id": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Related Event Id"
+    },
+    "source": {
+      "$ref": "#/$defs/EventSource",
+      "default": "sim"
+    }
+  },
+  "required": [
+    "msg",
+    "schema_version",
+    "id",
+    "match_id",
+    "t",
+    "minute",
+    "phase",
+    "type",
+    "team",
+    "player",
+    "receiver",
+    "start",
+    "end",
+    "outcome",
+    "under_pressure",
+    "ball_speed_kmh",
+    "player_speed_kmh",
+    "distance_m",
+    "related_event_id",
+    "source"
+  ],
+  "title": "MatchEvent",
+  "type": "object"
+}

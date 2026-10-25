@@ -1,0 +1,573 @@
+{
+  "msg": "match_meta",
+  "schema_version": "1.0",
+  "match_id": "M001",
+  "competition": "Synthetic Premier Division",
+  "venue": "Northgate Park",
+  "kickoff": "2026-10-25T15:00:00Z",
+  "seed": 7,
+  "home": {
+    "id": "north-city",
+    "name": "North City FC",
+    "short_name": "NCF",
+    "side": "home",
+    "colors": {
+      "primary": "#1F4E79",
+      "secondary": "#FFFFFF"
+    },
+    "formation": "4-3-3",
+    "players": [
+      {
+        "id": "H1",
+        "name": "Tomás Varga",
+        "short_name": "Varga",
+        "number": 1,
+        "position": "GK",
+        "nationality": "HUN",
+        "attributes": {
+          "pace": 44,
+          "passing": 56,
+          "finishing": 15,
+          "dribbling": 34,
+          "defending": 34,
+          "stamina": 55
+        }
+      },
+      {
+        "id": "H2",
+        "name": "Kwame Asante-Reid",
+        "short_name": "Asante-Reid",
+        "number": 2,
+        "position": "FB",
+        "nationality": "ENG",
+        "attributes": {
+          "pace": 80,
+          "passing": 65,
+          "finishing": 44,
+          "dribbling": 71,
+          "defending": 66,
+          "stamina": 84
+        }
+      },
+      {
+        "id": "H4",
+        "name": "Lucas Moreau",
+        "short_name": "Moreau",
+        "number": 4,
+        "position": "CB",
+        "nationality": "FRA",
+        "attributes": {
+          "pace": 62,
+          "passing": 59,
+          "finishing": 30,
+          "dribbling": 50,
+          "defending": 80,
+          "stamina": 70
+        }
+      },
+      {
+        "id": "H5",
+        "name": "Dani Okafor",
+        "short_name": "Okafor",
+        "number": 5,
+        "position": "CB",
+        "nationality": "NGA",
+        "attributes": {
+          "pace": 62,
+          "passing": 60,
+          "finishing": 37,
+          "dribbling": 50,
+          "defending": 74,
+          "stamina": 78
+        }
+      },
+      {
+        "id": "H3",
+        "name": "Ilyas Benali",
+        "short_name": "Benali",
+        "number": 3,
+        "position": "FB",
+        "nationality": "MAR",
+        "attributes": {
+          "pace": 73,
+          "passing": 67,
+          "finishing": 49,
+          "dribbling": 72,
+          "defending": 75,
+          "stamina": 76
+        }
+      },
+      {
+        "id": "H6",
+        "name": "Jonas Lindqvist",
+        "short_name": "Lindqvist",
+        "number": 6,
+        "position": "DM",
+        "nationality": "SWE",
+        "attributes": {
+          "pace": 71,
+          "passing": 81,
+          "finishing": 50,
+          "dribbling": 59,
+          "defending": 73,
+          "stamina": 79
+        }
+      },
+      {
+        "id": "H8",
+        "name": "Mateo Ferraz",
+        "short_name": "Ferraz",
+        "number": 8,
+        "position": "CM",
+        "nationality": "POR",
+        "attributes": {
+          "pace": 74,
+          "passing": 76,
+          "finishing": 60,
+          "dribbling": 74,
+          "defending": 60,
+          "stamina": 86
+        }
+      },
+      {
+        "id": "H10",
+        "name": "Rayan Haddad",
+        "short_name": "Haddad",
+        "number": 10,
+        "position": "AM",
+        "nationality": "TUN",
+        "attributes": {
+          "pace": 71,
+          "passing": 90,
+          "finishing": 80,
+          "dribbling": 88,
+          "defending": 49,
+          "stamina": 74
+        }
+      },
+      {
+        "id": "H7",
+        "name": "Leo Whitcombe",
+        "short_name": "Whitcombe",
+        "number": 7,
+        "position": "W",
+        "nationality": "ENG",
+        "attributes": {
+          "pace": 81,
+          "passing": 77,
+          "finishing": 73,
+          "dribbling": 86,
+          "defending": 37,
+          "stamina": 79
+        }
+      },
+      {
+        "id": "H11",
+        "name": "Kenji Arai",
+        "short_name": "Arai",
+        "number": 11,
+        "position": "W",
+        "nationality": "JPN",
+        "attributes": {
+          "pace": 94,
+          "passing": 76,
+          "finishing": 75,
+          "dribbling": 77,
+          "defending": 43,
+          "stamina": 74
+        }
+      },
+      {
+        "id": "H9",
+        "name": "Sami Kaya",
+        "short_name": "Kaya",
+        "number": 9,
+        "position": "ST",
+        "nationality": "TUR",
+        "attributes": {
+          "pace": 83,
+          "passing": 63,
+          "finishing": 85,
+          "dribbling": 78,
+          "defending": 37,
+          "stamina": 76
+        }
+      },
+      {
+        "id": "H12",
+        "name": "Owen Pryce",
+        "short_name": "Pryce",
+        "number": 12,
+        "position": "GK",
+        "nationality": "WAL",
+        "attributes": {
+          "pace": 51,
+          "passing": 59,
+          "finishing": 16,
+          "dribbling": 33,
+          "defending": 41,
+          "stamina": 59
+        }
+      },
+      {
+        "id": "H14",
+        "name": "Bruno Salvi",
+        "short_name": "Salvi",
+        "number": 14,
+        "position": "CM",
+        "nationality": "ITA",
+        "attributes": {
+          "pace": 70,
+          "passing": 77,
+          "finishing": 68,
+          "dribbling": 70,
+          "defending": 69,
+          "stamina": 90
+        }
+      },
+      {
+        "id": "H15",
+        "name": "Noah Castell",
+        "short_name": "Castell",
+        "number": 15,
+        "position": "CB",
+        "nationality": "ESP",
+        "attributes": {
+          "pace": 62,
+          "passing": 60,
+          "finishing": 38,
+          "dribbling": 48,
+          "defending": 82,
+          "stamina": 76
+        }
+      },
+      {
+        "id": "H17",
+        "name": "Malik Diarra",
+        "short_name": "Diarra",
+        "number": 17,
+        "position": "W",
+        "nationality": "MLI",
+        "attributes": {
+          "pace": 85,
+          "passing": 79,
+          "finishing": 71,
+          "dribbling": 80,
+          "defending": 43,
+          "stamina": 75
+        }
+      },
+      {
+        "id": "H19",
+        "name": "Finn O'Rourke",
+        "short_name": "O'Rourke",
+        "number": 19,
+        "position": "ST",
+        "nationality": "IRL",
+        "attributes": {
+          "pace": 75,
+          "passing": 68,
+          "finishing": 82,
+          "dribbling": 70,
+          "defending": 41,
+          "stamina": 75
+        }
+      }
+    ],
+    "starting_xi": [
+      "H1",
+      "H2",
+      "H4",
+      "H5",
+      "H3",
+      "H6",
+      "H8",
+      "H10",
+      "H7",
+      "H11",
+      "H9"
+    ]
+  },
+  "away": {
+    "id": "harbour-united",
+    "name": "Harbour United",
+    "short_name": "HBU",
+    "side": "away",
+    "colors": {
+      "primary": "#C62828",
+      "secondary": "#1A1A1A"
+    },
+    "formation": "4-2-3-1",
+    "players": [
+      {
+        "id": "A1",
+        "name": "Erik Sandvik",
+        "short_name": "Sandvik",
+        "number": 1,
+        "position": "GK",
+        "nationality": "NOR",
+        "attributes": {
+          "pace": 41,
+          "passing": 61,
+          "finishing": 15,
+          "dribbling": 24,
+          "defending": 70,
+          "stamina": 55
+        }
+      },
+      {
+        "id": "A2",
+        "name": "Marcus Bellamy",
+        "short_name": "Bellamy",
+        "number": 2,
+        "position": "FB",
+        "nationality": "ENG",
+        "attributes": {
+          "pace": 84,
+          "passing": 72,
+          "finishing": 48,
+          "dribbling": 74,
+          "defending": 71,
+          "stamina": 81
+        }
+      },
+      {
+        "id": "A5",
+        "name": "Thiago Nunes",
+        "short_name": "Nunes",
+        "number": 5,
+        "position": "CB",
+        "nationality": "BRA",
+        "attributes": {
+          "pace": 70,
+          "passing": 64,
+          "finishing": 38,
+          "dribbling": 51,
+          "defending": 83,
+          "stamina": 81
+        }
+      },
+      {
+        "id": "A6",
+        "name": "Pavel Novak",
+        "short_name": "Novak",
+        "number": 6,
+        "position": "CB",
+        "nationality": "CZE",
+        "attributes": {
+          "pace": 66,
+          "passing": 60,
+          "finishing": 30,
+          "dribbling": 48,
+          "defending": 81,
+          "stamina": 80
+        }
+      },
+      {
+        "id": "A3",
+        "name": "Yusuf Demir",
+        "short_name": "Demir",
+        "number": 3,
+        "position": "FB",
+        "nationality": "TUR",
+        "attributes": {
+          "pace": 82,
+          "passing": 65,
+          "finishing": 39,
+          "dribbling": 73,
+          "defending": 77,
+          "stamina": 80
+        }
+      },
+      {
+        "id": "A4",
+        "name": "Oliver Grant",
+        "short_name": "Grant",
+        "number": 4,
+        "position": "DM",
+        "nationality": "SCO",
+        "attributes": {
+          "pace": 72,
+          "passing": 81,
+          "finishing": 54,
+          "dribbling": 66,
+          "defending": 74,
+          "stamina": 90
+        }
+      },
+      {
+        "id": "A8",
+        "name": "Adrien Lefèvre",
+        "short_name": "Lefèvre",
+        "number": 8,
+        "position": "DM",
+        "nationality": "FRA",
+        "attributes": {
+          "pace": 68,
+          "passing": 82,
+          "finishing": 49,
+          "dribbling": 59,
+          "defending": 77,
+          "stamina": 84
+        }
+      },
+      {
+        "id": "A10",
+        "name": "Nico Albers",
+        "short_name": "Albers",
+        "number": 10,
+        "position": "AM",
+        "nationality": "GER",
+        "attributes": {
+          "pace": 72,
+          "passing": 87,
+          "finishing": 69,
+          "dribbling": 83,
+          "defending": 39,
+          "stamina": 75
+        }
+      },
+      {
+        "id": "A7",
+        "name": "Diego Herrera",
+        "short_name": "Herrera",
+        "number": 7,
+        "position": "W",
+        "nationality": "ARG",
+        "attributes": {
+          "pace": 92,
+          "passing": 72,
+          "finishing": 66,
+          "dribbling": 87,
+          "defending": 37,
+          "stamina": 80
+        }
+      },
+      {
+        "id": "A11",
+        "name": "Samuel Mensah",
+        "short_name": "Mensah",
+        "number": 11,
+        "position": "W",
+        "nationality": "GHA",
+        "attributes": {
+          "pace": 86,
+          "passing": 75,
+          "finishing": 65,
+          "dribbling": 78,
+          "defending": 41,
+          "stamina": 80
+        }
+      },
+      {
+        "id": "A9",
+        "name": "Viktor Halvorsen",
+        "short_name": "Halvorsen",
+        "number": 9,
+        "position": "ST",
+        "nationality": "DEN",
+        "attributes": {
+          "pace": 82,
+          "passing": 64,
+          "finishing": 86,
+          "dribbling": 74,
+          "defending": 37,
+          "stamina": 74
+        }
+      },
+      {
+        "id": "A13",
+        "name": "Luca Ricci",
+        "short_name": "Ricci",
+        "number": 13,
+        "position": "GK",
+        "nationality": "ITA",
+        "attributes": {
+          "pace": 50,
+          "passing": 60,
+          "finishing": 14,
+          "dribbling": 34,
+          "defending": 40,
+          "stamina": 57
+        }
+      },
+      {
+        "id": "A14",
+        "name": "Hamza Idrissi",
+        "short_name": "Idrissi",
+        "number": 14,
+        "position": "CM",
+        "nationality": "MAR",
+        "attributes": {
+          "pace": 68,
+          "passing": 75,
+          "finishing": 58,
+          "dribbling": 70,
+          "defending": 61,
+          "stamina": 88
+        }
+      },
+      {
+        "id": "A16",
+        "name": "Jake Mallory",
+        "short_name": "Mallory",
+        "number": 16,
+        "position": "CB",
+        "nationality": "ENG",
+        "attributes": {
+          "pace": 62,
+          "passing": 59,
+          "finishing": 36,
+          "dribbling": 53,
+          "defending": 76,
+          "stamina": 73
+        }
+      },
+      {
+        "id": "A18",
+        "name": "Kofi Boateng-Lowe",
+        "short_name": "Boateng-Lowe",
+        "number": 18,
+        "position": "W",
+        "nationality": "GHA",
+        "attributes": {
+          "pace": 84,
+          "passing": 68,
+          "finishing": 66,
+          "dribbling": 82,
+          "defending": 42,
+          "stamina": 79
+        }
+      },
+      {
+        "id": "A20",
+        "name": "Ivan Petrov",
+        "short_name": "Petrov",
+        "number": 20,
+        "position": "ST",
+        "nationality": "BUL",
+        "attributes": {
+          "pace": 83,
+          "passing": 69,
+          "finishing": 81,
+          "dribbling": 70,
+          "defending": 40,
+          "stamina": 78
+        }
+      }
+    ],
+    "starting_xi": [
+      "A1",
+      "A2",
+      "A5",
+      "A6",
+      "A3",
+      "A4",
+      "A8",
+      "A10",
+      "A7",
+      "A11",
+      "A9"
+    ]
+  }
+}

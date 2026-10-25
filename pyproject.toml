@@ -1,0 +1,13 @@
+# Workspace-level tooling config. Each service/package has its own pyproject.toml.
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = ["apps", "node_modules"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["contracts/tests", "tools"]
+addopts = "-q"

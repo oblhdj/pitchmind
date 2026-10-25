@@ -331,7 +331,7 @@ Contract & Key fields \\
 \midrule
 \texttt{MatchMeta}  & match\_id, teams, lineups, players (id, name, number, position, attributes), venue, seed \\
 \texttt{MatchEvent} & id, match\_id, t (s), minute, phase, type, team, player, receiver, start[x,y], end[x,y], outcome, under\_pressure, ball\_speed\_kmh, source (sim/cv) \\
-\texttt{StatUpdate} & match\_id, t, scope (team/player), metric, value, window, delta \\
+\texttt{StatSnapshot} & match\_id, t, minute, phase, score, home/away TeamStats, momentum, control\_chaos, rhythm\_epm, players \\
 \texttt{Moment}     & id, match\_id, t, kind, importance (0--1), team, players, evidence (event ids), metrics \\
 \texttt{Insight}    & id, moment\_id, segment, language, headline, body, evidence, metrics, verified, fallback, model, latency\_ms \\
 \texttt{Overlay}    & overlay\_id, match\_id, show\_at, duration, slot, priority, segment, title, body, evidence, metric \\
@@ -340,9 +340,11 @@ Contract & Key fields \\
 \end{tabularx}
 
 \medskip
-\noindent Pitch coordinates: 105 $\times$ 68 m, origin bottom-left, home attacks left-to-right in the 1st half.
-Event types: \texttt{pass, carry, shot, tackle, interception, pressure, foul, card, sub, possession\_change, goal, phase\_change}.
-Segment key format: \texttt{persona|lang|club:ID|player:ID}.
+\noindent Pitch coordinates: 105 $\times$ 68 m, relative to the acting team, which always attacks towards $x = 105$.
+Time: \texttt{t} = seconds of play since kick-off, continuous across halves; \texttt{minute} = broadcast minute.
+Event types: \texttt{pass, carry, shot, save, tackle, interception, clearance, pressure, foul, card, substitution, possession\_change, goal, sprint, offside, phase\_change}.
+Segment key format: \texttt{persona|lang|club:ID|player:ID|metric:NAME} (\texttt{*} = any).
+Full reference: \texttt{contracts/README.md}.
 
 %===================================================================
 \section{Repository Structure}

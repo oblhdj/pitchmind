@@ -1,0 +1,125 @@
+{
+  "$defs": {
+    "Language": {
+      "enum": [
+        "en",
+        "fr",
+        "ar",
+        "es"
+      ],
+      "title": "Language",
+      "type": "string"
+    },
+    "MetricName": {
+      "enum": [
+        "possession_pct",
+        "passes",
+        "pass_accuracy_pct",
+        "pass_difficulty",
+        "pass_distance_m",
+        "ball_speed_kmh",
+        "shot_speed_kmh",
+        "player_speed_kmh",
+        "distance_covered_m",
+        "sprints",
+        "shots",
+        "shots_on_target",
+        "xg",
+        "xt",
+        "tackles_won",
+        "pressure_index",
+        "momentum",
+        "control_chaos",
+        "rhythm_epm"
+      ],
+      "title": "MetricName",
+      "type": "string"
+    },
+    "Persona": {
+      "enum": [
+        "analyst",
+        "casual",
+        "beginner"
+      ],
+      "title": "Persona",
+      "type": "string"
+    },
+    "TeamSide": {
+      "enum": [
+        "home",
+        "away"
+      ],
+      "title": "TeamSide",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "display_name": {
+      "title": "Display Name",
+      "type": "string"
+    },
+    "persona": {
+      "$ref": "#/$defs/Persona",
+      "default": "casual"
+    },
+    "language": {
+      "$ref": "#/$defs/Language",
+      "default": "en"
+    },
+    "club": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TeamSide"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "player": {
+      "anyOf": [
+        {
+          "examples": [
+            "H10",
+            "A1"
+          ],
+          "pattern": "^[HA]\\d{1,2}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Player"
+    },
+    "metric_focus": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MetricName"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "id",
+    "display_name",
+    "persona",
+    "language",
+    "club",
+    "player",
+    "metric_focus"
+  ],
+  "title": "FanProfile",
+  "type": "object"
+}
