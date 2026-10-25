@@ -2,7 +2,7 @@ import asyncio
 from collections.abc import AsyncIterator
 
 import pytest
-from pitchmind_bus import InMemoryBus, Wire
+from pitchmind_bus import InMemoryBus, Wire, make_bus
 from pitchmind_contracts import EventType, MatchEvent, Phase, Topic
 
 
@@ -79,6 +79,25 @@ def test_a_message_being_handled_still_counts_as_busy() -> None:
         return seen
 
     assert asyncio.run(scenario()) == [1, 1, 1, 0]
+
+
+def test_make_bus_picks_the_backend_from_the_environment() -> None:
+    assert isinstance(make_bus({}), InMemoryBus)
+    assert isinstance(make_bus({"BUS_BACKEND": "local"}), InMemoryBus)
+    with pytest.raises(ValueError, match="EVENTHUB_NAMESPACE"):
+        make_bus({"BUS_BACKEND": "eventhubs"})
+    with pytest.raises(ValueError, match="BUS_BACKEND"):
+        make_bus({"BUS_BACKEND": "kafka"})
+
+
+def test_event_hubs_backend_uses_the_fully_qualified_namespace() -> None:
+    async def scenario() -> str:
+        bus = make_bus({"BUS_BACKEND": "eventhubs", "EVENTHUB_NAMESPACE": "pitchmind-eh-abc123"})
+        namespace = str(getattr(bus, "namespace", ""))
+        await bus.close()  # nothing was opened: closing must still be clean
+        return namespace
+
+    assert asyncio.run(scenario()) == "pitchmind-eh-abc123.servicebus.windows.net"
 
 
 def test_close_stops_iteration_and_rejects_publishing() -> None:

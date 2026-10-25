@@ -9,8 +9,9 @@ subscribers that join later only see what is published after they joined.
 from __future__ import annotations
 
 import asyncio
+import os
 from collections import defaultdict
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from typing import Protocol, cast
 
 from pitchmind_contracts import Insight, MatchEvent, MatchMeta, Moment, Overlay, StatSnapshot, Topic, parse_wire
@@ -102,4 +103,24 @@ class InMemoryBus:
                 await queue.put(_CLOSED)
 
 
-__all__ = ["Bus", "InMemoryBus", "Wire"]
+def make_bus(env: Mapping[str, str] | None = None) -> Bus:
+    """The bus selected by ``BUS_BACKEND``: ``local`` (default, in-memory) or ``eventhubs``.
+
+    ``eventhubs`` needs ``EVENTHUB_NAMESPACE`` (e.g. ``pitchmind-eh.servicebus.windows.net``)
+    and an Entra ID identity (Managed Identity in Azure, ``az login`` locally).
+    """
+    env = os.environ if env is None else env
+    backend = env.get("BUS_BACKEND", "local").strip().lower()
+    if backend in ("local", "memory"):
+        return InMemoryBus()
+    if backend == "eventhubs":
+        namespace = env.get("EVENTHUB_NAMESPACE", "").strip()
+        if not namespace:
+            raise ValueError("BUS_BACKEND=eventhubs needs EVENTHUB_NAMESPACE")
+        from .eventhubs import EventHubsBus  # optional dependency: pip install pitchmind-bus[eventhubs]
+
+        return EventHubsBus(namespace if "." in namespace else f"{namespace}.servicebus.windows.net")
+    raise ValueError(f"BUS_BACKEND must be 'local' or 'eventhubs', got {backend!r}")
+
+
+__all__ = ["Bus", "InMemoryBus", "Wire", "make_bus"]

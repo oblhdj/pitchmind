@@ -20,8 +20,10 @@ from pitchmind_contracts import (
     OverlaySlot,
     parse_wire,
 )
-from pitchmind_runner import Gateway, Pipeline, PipelineConfig, read_recording, replay_recording
+from pitchmind_runner import Gateway, Pipeline, PipelineConfig, cloud, read_recording, replay_recording
 from pitchmind_runner.__main__ import parse_args
+from pitchmind_runner.cloud import config_from_env
+from pitchmind_runner.cloud import main as cloud_main
 from websockets.asyncio.client import connect
 from websockets.asyncio.server import serve
 
@@ -165,6 +167,58 @@ def test_disable_rejects_unknown_agents() -> None:
     with pytest.raises(SystemExit):
         parse_args(["--disable", "narative"])
     assert parse_args(["--disable", "narrative"]).disable == ["narrative"]
+
+
+def test_cloud_stage_config_comes_from_the_environment() -> None:
+    config = config_from_env(
+        {"SEGMENTS": "demo", "SPEED": "6", "LLM": "mock", "PITCHMIND_DISABLED_AGENTS": "narrative"}
+    )
+    assert config.speed == 6 and config.llm == "mock" and len(config.segments) == len(SEGMENTS)
+    assert {a.value for a in config.agents.disabled_agents} == {"narrative"}
+    with pytest.raises(SystemExit):
+        cloud_main(["not-a-stage"])
+
+
+def test_tracing_is_configured_only_with_a_connection_string(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Review M1: the App Insights connection string must actually turn tracing on."""
+    calls: list[str | None] = []
+
+    async def fake_configure(target: str, *, connection_string: str | None = None) -> None:
+        calls.append(connection_string)
+
+    monkeypatch.setattr(cloud, "configure_tracing", fake_configure)
+    assert asyncio.run(cloud.setup_observability({})) is False
+    assert asyncio.run(cloud.setup_observability({"APPLICATIONINSIGHTS_CONNECTION_STRING": "InstrumentationKey=x"}))
+    assert calls == ["InstrumentationKey=x"]
+
+    async def broken(target: str, *, connection_string: str | None = None) -> None:
+        raise RuntimeError("exporter unavailable")
+
+    monkeypatch.setattr(cloud, "configure_tracing", broken)
+    assert asyncio.run(cloud.setup_observability({"APPLICATIONINSIGHTS_CONNECTION_STRING": "x"})) is False
+
+
+def test_subscribe_is_throttled(played: tuple[Gateway, Path]) -> None:
+    """Review M4: switching segment resends history, so it is limited to once per second."""
+    gateway, _ = played
+    sent: list[str] = []
+
+    class FakeClient:
+        async def send(self, text: str) -> None:
+            sent.append(text)
+
+    client = cast(Any, FakeClient())
+    message = json.dumps({"type": "subscribe", "segment_key": ARABIC})
+
+    async def scenario() -> tuple[int, int]:
+        await gateway._on_client_message(client, message)
+        first = len(sent)
+        await gateway._on_client_message(client, message)  # immediately again: ignored
+        return first, len(sent)
+
+    first, after_spam = asyncio.run(scenario())
+    assert first > 0 and after_spam == first
+    gateway.clients.pop(client, None)
 
 
 def test_a_recorded_match_replays_identically(played: tuple[Gateway, Path]) -> None:
