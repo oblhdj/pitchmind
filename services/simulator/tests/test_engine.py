@@ -1,9 +1,10 @@
+from collections.abc import Sequence
 from itertools import pairwise
 
 import pytest
 from pitchmind_contracts import EventType, MatchEvent, MatchMeta, Outcome, Phase, TeamSide
+from pitchmind_football import expected_goals, expected_threat, flip, pass_difficulty
 from pitchmind_simulator import DEMO, ORGANIC, MatchEngine, build_match_meta, simulate
-from pitchmind_simulator.football import expected_goals, flip, pass_difficulty
 
 
 def events_of(messages: list[MatchMeta | MatchEvent]) -> list[MatchEvent]:
@@ -27,6 +28,11 @@ class TestFootballModels:
         long = pass_difficulty((40, 34), (80, 34), under_pressure=False)
         assert short < long
         assert pass_difficulty((40, 34), (50, 34), under_pressure=True) > short
+
+    def test_threat_rises_towards_goal(self) -> None:
+        assert expected_threat((30, 34)) < expected_threat((70, 34)) < expected_threat((90, 34))
+        assert expected_threat((94, 34)) > expected_threat((94, 5))
+        assert expected_threat((52.5, 34)) < 0.02
 
     def test_flip_is_an_involution(self) -> None:
         assert flip(flip((12.3, 45.6))) == (12.3, 45.6)
@@ -75,11 +81,12 @@ class TestRealism:
     """Averages over a few organic matches must look like real football."""
 
     @staticmethod
-    def mean(values: list[float]) -> float:
+    def mean(values: Sequence[float]) -> float:
         return sum(values) / len(values)
 
     def test_pass_accuracy_and_volume(self, matches: list[list[MatchEvent]]) -> None:
-        accs, counts = [], []
+        accs: list[float] = []
+        counts: list[int] = []
         for events in matches:
             passes = [e for e in events if e.type is EventType.PASS]
             counts.append(len(passes))
@@ -97,6 +104,7 @@ class TestRealism:
         for events in matches:
             by_id = {e.id: e for e in events}
             for goal in (e for e in events if e.type is EventType.GOAL):
+                assert goal.related_event_id is not None
                 shot = by_id[goal.related_event_id]
                 assert shot.type is EventType.SHOT and shot.outcome is Outcome.GOAL
                 assert shot.team is goal.team
@@ -121,6 +129,7 @@ class TestDemoScenario:
     def test_haddad_assists_the_equaliser(self, demo: list[MatchEvent]) -> None:
         by_id = {e.id: e for e in demo}
         equaliser = next(e for e in demo if e.type is EventType.GOAL and e.player == "H9")
+        assert equaliser.related_event_id is not None
         shot = by_id[equaliser.related_event_id]
         assist = by_id[shot.id - 1]
         assert assist.type is EventType.PASS and assist.player == "H10" and assist.receiver == "H9"

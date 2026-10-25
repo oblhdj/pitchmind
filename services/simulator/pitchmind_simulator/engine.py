@@ -27,8 +27,7 @@ from pitchmind_contracts import (
     Position,
     TeamSide,
 )
-
-from .football import (
+from pitchmind_football import (
     GOAL_Y,
     clamp,
     clamp_point,
@@ -39,6 +38,7 @@ from .football import (
     pass_difficulty,
     zone,
 )
+
 from .scenario import ORGANIC, Beat, BeatKind, Scenario, ScheduledSub
 
 HOME, AWAY = TeamSide.HOME, TeamSide.AWAY
@@ -212,6 +212,12 @@ class MatchEngine:
                 value *= w.press
         return value
 
+    def _press_penalty(self) -> float:
+        """Extra failure chance when an above-normal press is on the ball carrier."""
+        if not self.pressured:
+            return 0.0
+        return max(0.0, self._press_intensity(other(self.possession)) - 1.0) * 0.08
+
     # ---------------------------------------------------------- game flow
 
     def _kickoff(self, side: TeamSide) -> None:
@@ -279,8 +285,10 @@ class MatchEngine:
 
     def _maybe_press(self) -> None:
         defending = other(self.possession)
-        p = 0.16 * self._press_intensity(defending) * (1.25 if self.ball[0] < 52.5 else 0.85)
-        if self.rng.random() < p:
+        intensity = self._press_intensity(defending)
+        # A pressing team presses *high*: intensity counts twice in the opponent's own half.
+        zone_factor = 1.25 * intensity if self.ball[0] < 52.5 else 0.85
+        if self.rng.random() < min(0.85, 0.16 * intensity * zone_factor):
             self._emit(EventType.PRESSURE, team=defending, player=self._defender(), start=flip(self.ball))
             self.pressured = True
             self._advance(0.8)
@@ -337,7 +345,8 @@ class MatchEngine:
             + (attrs.passing - 70) / 250
             - passer.fatigue(self.t) * 0.25
             + (0.01 if self.possession is HOME else 0.0)
-            - self._chaos() * 0.12
+            - self._chaos() * 0.28
+            - self._press_penalty()
         )
         success = self.rng.random() < clamp(p_success, 0.25, 0.97)
         ball_speed = round(clamp(25 + length * 1.25 + self.rng.gauss(0, 4), 15, 110), 1)
@@ -383,9 +392,9 @@ class MatchEngine:
         speed = round(clamp(14 + attrs.pace * 0.11 * (1 - carrier.fatigue(self.t)) + self.rng.gauss(0, 1.5), 8, 34), 1)
         chaos = self._chaos()
 
-        if self.rng.random() < 0.2 + (0.18 if self.pressured else 0.0) + chaos * 0.15:
+        if self.rng.random() < 0.2 + (0.18 if self.pressured else 0.0) + chaos * 0.3 + 2 * self._press_penalty():
             defender = self._state(self._defender())
-            if self.rng.random() < 0.27:
+            if self.rng.random() < 0.27 + chaos * 0.25:
                 self._foul(defender)
                 return
             p_tackle = clamp(

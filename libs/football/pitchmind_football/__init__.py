@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import math
 
-from pitchmind_contracts import PITCH_LENGTH_M, PITCH_WIDTH_M
+from pitchmind_contracts import PITCH_LENGTH_M, PITCH_WIDTH_M, Position
 
 GOAL_X = PITCH_LENGTH_M
 GOAL_Y = PITCH_WIDTH_M / 2
@@ -67,6 +67,22 @@ def pass_difficulty(start: tuple[float, float], end: tuple[float, float], *, und
     if end[0] > 88.5 and 13.8 < end[1] < 54.2:  # into the penalty box
         score += 0.12
     return round(clamp(score, 0.0, 1.0), 2)
+
+
+def expected_threat(point: tuple[float, float]) -> float:
+    """Smooth xT-style surface: probability that possession here leads to a goal soon.
+
+    A Gaussian bump centred on the goal mouth, roughly matching published xT grids:
+    centre circle ~0.004, edge of the box ~0.12, penalty spot ~0.21, six-yard box ~0.30.
+    """
+    dx = GOAL_X - point[0]
+    dy = point[1] - GOAL_Y
+    return round(0.004 + 0.32 * math.exp(-(dx * dx) / (2 * 12.0**2) - (dy * dy) / (2 * 14.0**2)), 4)
+
+
+def running_rate_m_per_min(position: Position, stamina: int) -> float:
+    """Estimated distance covered per minute on the pitch (outfield ~110-120 m/min, keepers 55)."""
+    return 55.0 if position is Position.GK else 100.0 + stamina * 0.2
 
 
 def zone(x: float) -> str:

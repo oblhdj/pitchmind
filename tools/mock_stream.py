@@ -56,6 +56,7 @@ from pitchmind_contracts import (
     TeamStats,
     parse_wire,
 )
+from pitchmind_football import running_rate_m_per_min
 from pitchmind_simulator.league import build_match_meta
 
 MATCH_ID = "M001"
@@ -988,9 +989,7 @@ def build_snapshot(t: float, meta: MatchMeta, events: list[MatchEvent], ids: dic
                     shots=len(shots),
                     xg=round(sum(xg_by_id.get(e.id, 0.0) for e in shots), 2),
                     tackles_won=int(mins * p.attributes.defending / 100 * 0.05),
-                    distance_covered_m=round(
-                        mins * (55 if p.position is Position.GK else 100 + p.attributes.stamina * 0.2)
-                    ),
+                    distance_covered_m=round(mins * running_rate_m_per_min(p.position, p.attributes.stamina)),
                     top_speed_kmh=round(max([base_speed, *sprint_speeds]), 1),
                     sprints=int(mins * p.attributes.pace / 700) + sum(e.type is EventType.SPRINT for e in mine),
                 )
