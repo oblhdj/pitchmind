@@ -16,14 +16,16 @@ files = [
     "libs/football/pitchmind_football",
     "services/simulator/pitchmind_simulator",
     "services/stats-engine/pitchmind_stats",
+    "services/agents/pitchmind_agents",
     "tools",
     "contracts/tests",
     "services/simulator/tests",
     "services/stats-engine/tests",
+    "services/agents/tests",
 ]
-mypy_path = "contracts,libs/football,services/simulator,services/stats-engine,tools"
+mypy_path = "contracts,libs/football,services/simulator,services/stats-engine,services/agents,tools"
 explicit_package_bases = true
 
 [tool.pytest.ini_options]
-testpaths = ["contracts/tests", "tools", "services/simulator/tests", "services/stats-engine/tests"]
+testpaths = ["contracts/tests", "tools", "services/simulator/tests", "services/stats-engine/tests", "services/agents/tests"]
 addopts = "-q"
