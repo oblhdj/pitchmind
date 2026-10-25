@@ -1,0 +1,53 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+local.settings.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+npm-debug.log*
+
+# Azure
+.azure/
+.azure-functions-core-tools/
+
+# CV models and large media
+*.pt
+*.onnx
+data/video/
+data/raw/
+
+# LaTeX build files (keep .tex and .pdf)
+*.aux
+*.log
+*.out
+*.toc
+*.xdv
+*.synctex.gz
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
