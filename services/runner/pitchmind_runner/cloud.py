@@ -6,7 +6,7 @@ Configuration comes from the environment, so the same image runs every stage:
 
     BUS_BACKEND=eventhubs  EVENTHUB_NAMESPACE=<name>.servicebus.windows.net
     SEGMENTS=demo          LLM=mock|foundry        (agents, render)
-    SPEED=10  SCENARIO=demo-comeback  MATCH_PAUSE_S=30   (simulator: loops matches forever)
+    SPEED=10  SCENARIO=demo-comeback  MATCH_PAUSE_S=90   (simulator: loops matches forever)
     META_EVERY_S=20                                      (simulator: re-announce the match for late stages)
     PORT=8765                                            (gateway: WebSocket on 0.0.0.0)
 
@@ -91,7 +91,7 @@ async def run_stage(stage: str, env: Mapping[str, str]) -> None:
     config = config_from_env(env)
     try:
         if stage == "simulator":
-            await loop_matches(bus, config, float(env.get("MATCH_PAUSE_S", "30")), float(env.get("META_EVERY_S", "20")))
+            await loop_matches(bus, config, float(env.get("MATCH_PAUSE_S", "90")), float(env.get("META_EVERY_S", "20")))
         elif stage == "stats":
             await stats_stage(bus)
         elif stage == "moments":

@@ -76,6 +76,31 @@ def test_rate_limiter_waits_for_a_free_slot() -> None:
     assert sleeps == [58.0]  # the 3rd call waits until the 1st leaves the 60 s window
 
 
+def test_rate_limiter_spreads_a_burst_over_10_second_windows() -> None:
+    """A goal fans out to every segment at once; Foundry refuses bursts that fit the minute."""
+    now = [0.0]
+    started: list[float] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        now[0] += seconds
+
+    limiter = RateLimiter(18, clock=lambda: now[0], sleep=fake_sleep, per_10s=3)
+
+    async def burst() -> None:
+        for _ in range(7):
+            await limiter.acquire()
+            started.append(now[0])
+
+    asyncio.run(burst())
+    assert started == [0.0, 0.0, 0.0, 10.0, 10.0, 10.0, 20.0]
+
+
+def test_each_model_deployment_has_its_own_limiter() -> None:
+    team = AgentTeam(mock_client_set(), AgentsConfig(requests_per_minute=12))
+    assert team.limiter("Phi-4") is team.limiter("Phi-4")
+    assert team.limiter("Phi-4") is not team.limiter("Phi-4-mini-instruct")
+
+
 def test_rate_limiter_zero_means_unlimited() -> None:
     async def never(_: float) -> None:
         raise AssertionError("must not sleep")

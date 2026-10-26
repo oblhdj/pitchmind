@@ -17,6 +17,7 @@ class AgentsConfig:
     judge: bool = False  # LLM judge on top of the code checks, for writer and segment drafts
     min_importance: float = 0.0
     disabled_agents: frozenset[AgentName] = field(default_factory=frozenset)  # failure-recovery demo switch
+    demo_plant: bool = False  # Verifier demo: plant a wrong number in each writer's first draft
     breaker_threshold: int = 3  # consecutive failures that open an agent's circuit
     breaker_cooldown_s: float = 30.0
     requests_per_minute: int = 0  # 0 = unlimited; set below the model deployment's RPM limit
@@ -60,6 +61,7 @@ class AgentsConfig:
                 moment_deadline_s=read("PITCHMIND_MOMENT_DEADLINE_S", float, defaults.moment_deadline_s),
                 max_retries=read("PITCHMIND_MAX_RETRIES", int, defaults.max_retries),
                 judge=env.get("PITCHMIND_JUDGE", "0").strip().lower() in {"1", "true", "yes"},
+                demo_plant=env.get("PITCHMIND_DEMO_PLANT", "0").strip().lower() in {"1", "true", "yes"},
                 min_importance=read("PITCHMIND_MIN_IMPORTANCE", float, defaults.min_importance),
                 requests_per_minute=read("PITCHMIND_RPM", int, defaults.requests_per_minute),
                 disabled_agents=frozenset(AgentName(name) for name in disabled),

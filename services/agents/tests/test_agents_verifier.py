@@ -37,6 +37,17 @@ def test_planted_wrong_number_is_rejected(goal: Facts) -> None:
     assert verdict.issues == ("body states 0.83, which is not in FACTS",)
 
 
+def test_event_ids_in_the_text_are_named_as_such(goal: Facts) -> None:
+    """Live, the recap writer kept copying event ids into the body: the feedback must say why."""
+    ids = sorted(goal.evidence)[:2]
+    verdict = check(with_body(goal, f"Halvorsen scores (events {ids[0]}, {ids[1]}) from a 0.83 xG chance."), goal)
+    assert verdict.issues == (
+        f"body writes event ids {ids[0]}, {ids[1]}: event ids belong only in a claim's evidence, "
+        "never in the headline, body or claim text",
+        "body states 0.83, which is not in FACTS",
+    )
+
+
 def test_numbers_written_as_words_are_checked(goal: Facts) -> None:
     english = with_body(goal, "Scored in the eleventh minute; one in four chances like that go in.")
     assert check(english, goal).issues == ("body states eleventh, four, which is not in FACTS",)

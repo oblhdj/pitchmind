@@ -31,7 +31,7 @@ web (Next.js, public, scales to zero) ── wss ──> gateway
 ```
 
 The script runs three passes (shared resources → pipeline stages → frontend built with the gateway URL)
-and prints the public URLs. The simulator loops the demo match forever (`matchSpeed`, default 6×), so
+and prints the public URLs. The simulator loops the demo match forever (`matchSpeed`, default 4×, so the agents keep up within the model quota), so
 anyone opening the URL sees a live game.
 
 ## Cost (approximate, while running)

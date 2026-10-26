@@ -28,6 +28,15 @@ logger = logging.getLogger(__name__)
 Handler = Callable[[Wire], Awaitable[None]]
 Stage = Coroutine[Any, Any, None]
 
+KEEP_MATCHES = 3  # per-match state a stage keeps; the always-on demo starts new matches forever
+META_WAIT_S = 5.0  # how long stats wait for their match's metadata before they are skipped
+
+
+def forget_oldest(*stores: dict[str, Any]) -> None:
+    for store in stores:
+        while len(store) > KEEP_MATCHES:
+            store.pop(next(iter(store)))  # dicts keep insertion order: the oldest match goes first
+
 
 def consume(bus: Bus, topics: Sequence[Topic], group: str, handler: Handler) -> Stage:
     """Subscribe to ``topics`` *now*, and return the coroutine that handles their messages.
@@ -97,6 +106,7 @@ def stats_stage(bus: Bus) -> Stage:
         if isinstance(message, MatchMeta):
             if message.match_id not in engines:  # a repeat is the simulator's re-announcement
                 engines[message.match_id] = StatsEngine(message)
+                forget_oldest(engines)
         elif isinstance(message, MatchEvent):
             if (engine := engines.get(message.match_id)) is None:
                 unknown(message.match_id)
@@ -109,6 +119,7 @@ def stats_stage(bus: Bus) -> Stage:
 def moments_stage(bus: Bus) -> Stage:
     detectors: dict[str, MomentDetector] = {}
     ready: dict[str, asyncio.Event] = {}
+    gave_up: set[str] = set()  # matches whose metadata did not come in time (stage started late)
     unknown = warn_once("moments")
 
     def gate(match_id: str) -> asyncio.Event:
@@ -123,14 +134,25 @@ def moments_stage(bus: Bus) -> Stage:
             if message.match_id not in detectors:  # a repeat is the simulator's re-announcement
                 detectors[message.match_id] = MomentDetector(message)
             gate(message.match_id).set()
+            forget_oldest(detectors, ready)
         elif isinstance(message, MatchEvent):
             if (detector := detectors.get(message.match_id)) is None:
                 unknown(message.match_id)
             else:
                 await publish(detector.on_event(message))
         elif isinstance(message, StatSnapshot):
-            await gate(message.match_id).wait()  # stats never outrun the match metadata
-            await publish(detectors[message.match_id].on_snapshot(message))
+            match_id = message.match_id
+            if match_id not in detectors and match_id not in gave_up:
+                # Stats may outrun the metadata on the other topic; wait a little, but never forever:
+                # this loop serves every match, and a late-started stage may never see this one's.
+                try:
+                    await asyncio.wait_for(gate(match_id).wait(), META_WAIT_S)
+                except TimeoutError:
+                    gave_up.add(match_id)
+            if (detector := detectors.get(match_id)) is None:
+                unknown(match_id)
+            else:
+                await publish(detector.on_snapshot(message))
 
     return consume(bus, [Topic.MATCH_EVENTS, Topic.MATCH_STATS], "moments", handle)
 

@@ -37,14 +37,17 @@ param foundryModelFast string = ''
 @description('Resource group of the Foundry resource; when set (and llm = foundry) the app identity gets Azure AI User on it.')
 param foundryResourceGroup string = ''
 
-@description('Agent calls per minute (llm = foundry); keep under the deployment limit. Phi-4 (20K tokens/min): 10.')
-param agentRpm string = '10'
+@description('Agent calls per minute per model deployment (llm = foundry); keep under its limit. Phi-4 / Phi-4-mini (20K tokens/min, ~1.5K per call): 12.')
+param agentRpm string = '12'
+
+@description('Moments below this importance get no AI text (llm = foundry), keeping the model quota for the moments that matter.')
+param agentMinImportance string = '0.5'
 
 @description('Seconds allowed for one agent call (llm = foundry); small serverless models can take 10-30 s.')
 param agentTimeoutS string = '30'
 
 @description('Match speed for the always-on demo match (1 = real time).')
-param matchSpeed string = '6'
+param matchSpeed string = '4'
 
 var suffix = take(uniqueString(resourceGroup().id), 6)
 var acrName = toLower('${prefix}${suffix}')
@@ -185,6 +188,7 @@ var commonEnv = [
   { name: 'PITCHMIND_RPM', value: useFoundry ? agentRpm : '0' }
   { name: 'PITCHMIND_AGENT_TIMEOUT_S', value: useFoundry ? agentTimeoutS : '8' }
   { name: 'PITCHMIND_MOMENT_DEADLINE_S', value: useFoundry ? '120' : '12' }
+  { name: 'PITCHMIND_MIN_IMPORTANCE', value: useFoundry ? agentMinImportance : '0' }
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', secretRef: 'appinsights' }
 ]
 

@@ -96,6 +96,14 @@ class Retry:
     issues: tuple[str, ...]
 
 
+DEMO_WRONG_XG = "0.99"  # an xG the demo match never reaches, so it is not in the facts
+
+
+def plant_demo_mistake(draft: Draft) -> Draft:
+    """The Verifier demo: a hallucinated number the Verifier must catch before fans see it."""
+    return draft.model_copy(update={"body": f"{draft.body} The xG was {DEMO_WRONG_XG}."})
+
+
 def _with(trace: Sequence[AgentName], role: AgentName, error: AgentCallError) -> tuple[AgentName, ...]:
     """The trace after a failed call: the agent counts as having handled it only if it was called."""
     return (*trace, role) if error.called else tuple(trace)
@@ -154,6 +162,10 @@ class Writer(Executor):
             except AgentCallError as exc:
                 trace[:] = _with(trace, self._role, exc)
                 break
+            # Only when a retry can follow: the demo shows the Verifier catching and recovering.
+            if attempt == 0 and self._team.config.demo_plant and self._team.config.max_retries > 0:
+                draft = plant_demo_mistake(draft)
+                logger.warning("demo: planted xG %s in the %s draft for %s", DEMO_WRONG_XG, self._role, job.moment.id)
             trace += [self._role, AgentName.VERIFIER]
             verdict = await self._verifier.verify(draft, job.facts, judge=True)
             if verdict.ok:
