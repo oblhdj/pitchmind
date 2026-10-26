@@ -13,6 +13,14 @@ export const LANGUAGES: readonly Language[] = ["en", "fr", "ar", "es"];
 
 export const DEFAULT_PROFILE: Profile = { persona: "analyst", language: "en", club: null, player: null };
 
+/** The segments the cloud generates (`SEGMENTS=demo`, the agents' `DEMO_SEGMENTS`). */
+export const DEMO_SEGMENTS: readonly string[] = [
+  "analyst|en|club:*|player:*|metric:*",
+  "casual|ar|club:home|player:*|metric:*",
+  "beginner|fr|club:*|player:*|metric:*",
+  "casual|en|club:*|player:H10|metric:*",
+];
+
 /** `persona|lang|club:X|player:Y|metric:*`, exactly as the agents and render service key their output. */
 export function segmentKey(profile: Profile): string {
   return `${profile.persona}|${profile.language}|club:${profile.club ?? "*"}|player:${profile.player ?? "*"}|metric:*`;
@@ -34,10 +42,10 @@ export function parseSegmentKey(key: string): Profile | null {
 }
 
 /**
- * The available segment that best fits a wanted one. In live mode the server generates the
- * exact segment; the mock replay only has a few, so a fan gets the nearest variant instead
- * of an empty feed. Language matters most, then persona; a player-focus variant is never
- * given to a fan who does not follow that player.
+ * The available segment that best fits a wanted one. The cloud generates only the demo
+ * segments and the mock replay only has a few, so a fan gets the nearest variant instead of an
+ * empty feed. Language matters most, then persona; a player-focus variant is never given to a
+ * fan who does not follow that player.
  */
 export function closestSegment(wanted: string, available: readonly string[]): string | null {
   if (available.includes(wanted)) return wanted;

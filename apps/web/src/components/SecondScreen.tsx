@@ -6,7 +6,7 @@ import { useHeld } from "@/lib/approvals";
 import { t, isRtl } from "@/lib/i18n";
 import { insightsFor, knownSegments } from "@/lib/match";
 import type { FeedParams } from "@/lib/options";
-import { closestSegment, segmentKey, type Profile } from "@/lib/segments";
+import { closestSegment, DEMO_SEGMENTS, segmentKey, type Profile } from "@/lib/segments";
 import { useMatch, useNow } from "@/lib/useMatch";
 
 import { Brand, BroadcastFrame, ReplayControls, StatusPill } from "./controls";
@@ -17,11 +17,13 @@ import { ExternalIcon } from "./ui";
 export function SecondScreen({ feed, initialProfile }: { feed: FeedParams; initialProfile: Profile }) {
   const [profile, setProfile] = useState(initialProfile);
   const segment = segmentKey(profile);
-  const { state, controls, speed } = useMatch({ mode: feed.mode, segment, speed: feed.speed, from: feed.from });
+  // Neither feed has every profile: the cloud generates the demo segments, the replay a few.
+  // A fan gets the nearest one (labelled in the profile panel) rather than an empty feed.
+  const liveSegment = feed.mode === "live" ? (closestSegment(segment, DEMO_SEGMENTS) ?? segment) : null;
+  const { state, controls, speed } = useMatch({ mode: feed.mode, segment: liveSegment ?? segment, speed: feed.speed, from: feed.from });
   const now = useNow();
   const held = useHeld();
-  // The live server generates the exact segment; the replay only has a few, so use the nearest one.
-  const effective = feed.mode === "mock" ? (closestSegment(segment, knownSegments(state)) ?? segment) : segment;
+  const effective = liveSegment ?? closestSegment(segment, knownSegments(state)) ?? segment;
   const insights = insightsFor(state, effective).filter((i) => !held.has(i.id));
   const language = profile.language;
 

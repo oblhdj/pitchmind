@@ -9,7 +9,7 @@ import { catalogOf, dueUntil, LiveFeed, parseStream } from "../../src/lib/feed";
 import { broadcastMinute } from "../../src/lib/format";
 import { initialState, insightsFor, onAir, reduce, type MatchState } from "../../src/lib/match";
 import { feedParams, profileParams } from "../../src/lib/options";
-import { closestSegment, parseSegmentKey, segmentKey } from "../../src/lib/segments";
+import { closestSegment, DEMO_SEGMENTS, LANGUAGES, parseSegmentKey, PERSONAS, segmentKey } from "../../src/lib/segments";
 
 const STREAM = readFileSync(path.resolve(__dirname, "../../../../data/mock/stream.jsonl"), "utf-8");
 const ANALYST = "analyst|en|club:*|player:*|metric:*";
@@ -30,6 +30,21 @@ test("the closest available segment prefers language, then persona, never anothe
   expect(closestSegment("casual|en|club:*|player:*|metric:*", available)).toBe(ANALYST);
   expect(closestSegment("casual|en|club:*|player:H10|metric:*", available)).toBe(PLAYER);
   expect(closestSegment("beginner|es|club:*|player:*|metric:*", available)).toBe("beginner|fr|club:*|player:*|metric:*");
+});
+
+test("live: every profile a fan can pick gets one of the segments the cloud generates", () => {
+  for (const persona of PERSONAS) {
+    for (const language of LANGUAGES) {
+      for (const club of [null, "home", "away"] as const) {
+        for (const player of [null, "H10", "A9"]) {
+          const served = closestSegment(segmentKey({ persona, language, club, player }), DEMO_SEGMENTS);
+          expect(DEMO_SEGMENTS).toContain(served);
+        }
+      }
+    }
+  }
+  expect(closestSegment("analyst|en|club:away|player:*|metric:*", DEMO_SEGMENTS)).toBe(ANALYST);
+  expect(closestSegment(PLAYER, DEMO_SEGMENTS)).toBe(PLAYER);
 });
 
 test("broadcast minutes show stoppage time", () => {
