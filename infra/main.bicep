@@ -34,6 +34,15 @@ param foundryModelStrong string = ''
 @description('Foundry deployment for persona, language and verifier (llm = foundry).')
 param foundryModelFast string = ''
 
+@description('Resource group of the Foundry resource; when set (and llm = foundry) the app identity gets Azure AI User on it.')
+param foundryResourceGroup string = ''
+
+@description('Agent calls per minute (llm = foundry); keep under the deployment limit. Phi-4 (20K tokens/min): 10.')
+param agentRpm string = '10'
+
+@description('Seconds allowed for one agent call (llm = foundry); small serverless models can take 10-30 s.')
+param agentTimeoutS string = '30'
+
 @description('Match speed for the always-on demo match (1 = real time).')
 param matchSpeed string = '6'
 
@@ -41,6 +50,9 @@ var suffix = take(uniqueString(resourceGroup().id), 6)
 var acrName = toLower('${prefix}${suffix}')
 var ehName = '${prefix}-eh-${suffix}'
 var tags = { project: 'pitchmind', hackathon: 'inside-the-game' }
+var useFoundry = llm == 'foundry'
+// https://<account>.services.ai.azure.com/api/projects/<project> -> <account>
+var foundryAccountName = empty(foundryProjectEndpoint) ? '' : split(split(foundryProjectEndpoint, '//')[1], '.')[0]
 
 // Who reads which topic: every stage has its own consumer group on each hub it reads.
 var hubs = [
@@ -135,6 +147,16 @@ resource ehData 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   }
 ]
 
+// The agents call Foundry models with the same identity (Entra ID, no API key).
+module foundryAccess 'foundry-access.bicep' = if (useFoundry && !empty(foundryResourceGroup) && !empty(foundryAccountName)) {
+  name: 'foundry-access-${suffix}'
+  scope: resourceGroup(foundryResourceGroup)
+  params: {
+    foundryAccountName: foundryAccountName
+    principalId: identity.properties.principalId
+  }
+}
+
 // --------------------------------------------------------------------------- Container Apps
 
 resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
@@ -159,6 +181,10 @@ var commonEnv = [
   { name: 'FOUNDRY_PROJECT_ENDPOINT', value: foundryProjectEndpoint }
   { name: 'FOUNDRY_MODEL_STRONG', value: foundryModelStrong }
   { name: 'FOUNDRY_MODEL_FAST', value: foundryModelFast }
+  // Real models get a rate limit and patient timeouts; the instant offline mock keeps the defaults.
+  { name: 'PITCHMIND_RPM', value: useFoundry ? agentRpm : '0' }
+  { name: 'PITCHMIND_AGENT_TIMEOUT_S', value: useFoundry ? agentTimeoutS : '8' }
+  { name: 'PITCHMIND_MOMENT_DEADLINE_S', value: useFoundry ? '120' : '12' }
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', secretRef: 'appinsights' }
 ]
 

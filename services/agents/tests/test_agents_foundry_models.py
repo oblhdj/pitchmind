@@ -142,6 +142,40 @@ def test_rate_limit_wait_reads_retry_after_through_wrappers() -> None:
     assert rate_limit_wait(RuntimeError("connection reset")) is None
 
 
+def test_rate_limit_wait_finds_the_header_behind_a_wrapper_that_also_mentions_the_429() -> None:
+    try:
+        try:
+            raise FakeRateLimitError("7")
+        except FakeRateLimitError as inner:
+            raise RuntimeError("service failed: Error code: 429 - rate_limit_exceeded") from inner
+    except RuntimeError as wrapped:
+        assert rate_limit_wait(wrapped) == 7.0
+
+
+def test_retry_after_ms_wins_and_dates_fall_back_to_the_default() -> None:
+    error = FakeRateLimitError(None)
+    error.response.headers.update({"retry-after-ms": "2500", "retry-after": "9"})
+    assert rate_limit_wait(error) == 2.5
+    dated = FakeRateLimitError("Wed, 21 Oct 2026 07:28:00 GMT")
+    assert rate_limit_wait(dated) == 10.0
+
+
+def test_rate_limiter_can_be_reused_across_event_loops() -> None:
+    now = [0.0]
+
+    async def fake_sleep(seconds: float) -> None:
+        now[0] += seconds
+
+    limiter = RateLimiter(1, clock=lambda: now[0], sleep=fake_sleep)
+
+    async def contended() -> None:
+        await asyncio.gather(limiter.acquire(), limiter.acquire())  # the 2nd waits on the lock
+
+    asyncio.run(contended())
+    asyncio.run(contended())  # a new loop: no "bound to a different event loop" error
+    assert now[0] >= 180.0
+
+
 def make_team(responder: Responder, **config: Any) -> tuple[AgentTeam, list[float]]:
     waits: list[float] = []
 

@@ -5,7 +5,8 @@
 .EXAMPLE
   ./infra/deploy.ps1                                   # offline agents (mock model)
   ./infra/deploy.ps1 -Llm foundry -FoundryEndpoint https://pitchmind.services.ai.azure.com/api/projects/pitchmind `
-                     -FoundryStrong Phi-4 -FoundryFast Phi-4-mini-instruct
+                     -FoundryStrong Phi-4 -FoundryFast Phi-4
+                                                     # also grants the app identity Azure AI User on the Foundry resource
 
 .NOTES
   Needs the Azure CLI (`winget install -e --id Microsoft.AzureCLI`) and `az login`.
@@ -18,6 +19,8 @@ param(
     [string]$FoundryEndpoint = "",
     [string]$FoundryStrong = "",
     [string]$FoundryFast = "",
+    [string]$FoundryResourceGroup = "pitchmind-foundry-pl",  # where the Foundry resource lives ("" = grant access yourself)
+    [string]$AgentRpm = "10",  # agent calls per minute with -Llm foundry (Phi-4: 20K tokens/min)
     [string]$MatchSpeed = "6",
     [switch]$LocalDocker  # build images with local Docker instead of ACR Tasks
 )
@@ -33,7 +36,8 @@ function Invoke-Az {
 function Deploy([hashtable]$Extra) {
     $params = @(
         "location=$Location", "llm=$Llm", "matchSpeed=$MatchSpeed",
-        "foundryProjectEndpoint=$FoundryEndpoint", "foundryModelStrong=$FoundryStrong", "foundryModelFast=$FoundryFast"
+        "foundryProjectEndpoint=$FoundryEndpoint", "foundryModelStrong=$FoundryStrong", "foundryModelFast=$FoundryFast",
+        "foundryResourceGroup=$FoundryResourceGroup", "agentRpm=$AgentRpm"
     ) + ($Extra.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" })
     $json = Invoke-Az deployment group create -g $ResourceGroup -f infra/main.bicep -p @params --query properties.outputs -o json
     return ($json | Out-String | ConvertFrom-Json)
@@ -87,7 +91,7 @@ $webImage = Build-Image $acr "pitchmind-web:$tag" "apps/web/Dockerfile" @("NEXT_
 Write-Host "== pass 3/3: the frontend"
 $out = Deploy @{ pythonImage = $pythonImage; webImage = $webImage }
 
-if ($Llm -eq "foundry") {
+if ($Llm -eq "foundry" -and -not $FoundryResourceGroup) {
     Write-Host ""
     Write-Host "Grant the app identity access to Foundry (once):"
     Write-Host "  az role assignment create --role 'Azure AI User' --assignee-object-id $($out.identityPrincipalId.value) --assignee-principal-type ServicePrincipal --scope <Foundry resource id>"

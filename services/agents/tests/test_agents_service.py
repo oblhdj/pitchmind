@@ -103,18 +103,43 @@ def test_old_matches_are_forgotten_as_new_ones_start() -> None:
     asyncio.run(service.process(prime(service, "mom-M001-1")))
     for match_id in ("M002", "M003"):
         service.context(match_id)
-    assert list(service._contexts) == ["M002", "M003"]  # the live match and the previous one
-    assert "M001" not in service._published
-    assert not service.context("M001").seen("mom-M001-1")  # M001 starts afresh if it ever comes back
+    assert service.tracked_matches == ("M002", "M003")  # the live match and the previous one
+    assert service.is_closed("M001")
+
+
+def test_late_messages_for_a_closed_match_are_dropped_without_evicting_live_ones() -> None:
+    service = new_service()
+    goal = prime(service, "mom-M001-1")
+    for match_id in ("M002", "M003"):
+        service.context(match_id)
+    assert asyncio.run(service.process(goal)) == []  # M001 is closed: no agents called
+    meta = next(m for m in mock_messages() if m.msg == "match_meta")
+    assert asyncio.run(service.handle(meta)) == []
+    assert service.tracked_matches == ("M002", "M003")
 
 
 def test_a_match_still_being_processed_is_not_forgotten() -> None:
-    service = new_service()
-    service.context("M001")
-    service._running[("M001", "mom-M001-1")] = service_module._Run()
-    for match_id in ("M002", "M003"):
-        service.context(match_id)
-    assert "M001" in service._contexts
+    started, release = asyncio.Event(), asyncio.Event()
+    writer = Scripted(AgentName.NARRATIVE)
+
+    async def slow_writer(prompt: str) -> str:
+        started.set()
+        await release.wait()
+        return await writer(prompt)
+
+    service = AgentsService(AgentTeam(mock_client_set(overrides={AgentName.NARRATIVE: slow_writer})))
+    goal = prime(service, "mom-M001-1")
+
+    async def scenario() -> list[Insight]:
+        run = asyncio.create_task(service.process(goal))
+        await started.wait()
+        for match_id in ("M002", "M003"):
+            service.context(match_id)
+        assert "M001" in service.tracked_matches  # its goal is still being written
+        release.set()
+        return await run
+
+    assert len(asyncio.run(scenario())) == 3
 
 
 def test_downstream_messages_are_ignored() -> None:

@@ -14,7 +14,7 @@ web (Next.js, public, scales to zero) ── wss ──> gateway
 | Event Hubs namespace | Standard, 1 TU | one hub per topic, one consumer group per stage (Basic only has `$Default`) |
 | Container Registry | Basic | one pipeline image + one web image |
 | Log Analytics + Application Insights | pay-per-GB | container logs, agent traces |
-| User-assigned Managed Identity | — | AcrPull + Event Hubs Data Sender/Receiver only; **no keys or SAS anywhere** (`disableLocalAuth: true`) |
+| User-assigned Managed Identity | — | AcrPull + Event Hubs Data Sender/Receiver, plus Azure AI User on the Foundry resource with `-Llm foundry`; **no keys or SAS anywhere** (`disableLocalAuth: true`) |
 
 ## Prerequisites
 

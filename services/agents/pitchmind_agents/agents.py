@@ -76,7 +76,8 @@ MAX_RATE_LIMIT_WAIT_S = 60.0
 def rate_limit_wait(error: BaseException) -> float | None:
     """Seconds to wait if ``error`` (or any error it wraps) is an HTTP 429, else ``None``.
 
-    Uses the ``Retry-After`` header when the SDK error carries one.
+    The whole chain is searched for a retry header: SDK wrappers mention the 429 in their
+    message but only the innermost error carries the HTTP response.
     """
     stack, seen, limited = [error], set[int](), False
     while stack:
@@ -87,16 +88,24 @@ def rate_limit_wait(error: BaseException) -> float | None:
         text = str(current)
         if getattr(current, "status_code", None) == 429 or "rate_limit_exceeded" in text or "429 Too Many" in text:
             limited = True
-            headers = getattr(getattr(current, "response", None), "headers", None)
-            raw = headers.get("retry-after") if headers is not None else None
-            try:
-                return (
-                    min(max(float(raw), 1.0), MAX_RATE_LIMIT_WAIT_S) if raw is not None else DEFAULT_RATE_LIMIT_WAIT_S
-                )
-            except (TypeError, ValueError):
-                pass
+            if (seconds := _retry_after_s(getattr(getattr(current, "response", None), "headers", None))) is not None:
+                return seconds
         stack.extend(e for e in (current.__cause__, current.__context__, *current.args) if isinstance(e, BaseException))
     return DEFAULT_RATE_LIMIT_WAIT_S if limited else None
+
+
+def _retry_after_s(headers: Any) -> float | None:
+    """Azure sends ``retry-after-ms`` (milliseconds) and/or ``retry-after`` (seconds); dates are ignored."""
+    if headers is None:
+        return None
+    for name, scale in (("retry-after-ms", 0.001), ("retry-after", 1.0)):
+        raw = headers.get(name)
+        try:
+            if raw is not None:
+                return min(max(float(raw) * scale, 1.0), MAX_RATE_LIMIT_WAIT_S)
+        except (TypeError, ValueError):
+            continue
+    return None
 
 
 class AgentCallError(RuntimeError):
@@ -182,12 +191,19 @@ class RateLimiter:
         self._clock = clock
         self._sleep = sleep
         self._calls: deque[float] = deque()
-        self._lock = asyncio.Lock()
+        self._locks: dict[asyncio.AbstractEventLoop, asyncio.Lock] = {}
+
+    def _lock(self) -> asyncio.Lock:
+        """One lock per event loop: an asyncio.Lock must not be shared between loops."""
+        loop = asyncio.get_running_loop()
+        if loop not in self._locks:
+            self._locks = {loop: asyncio.Lock()}  # earlier loops are finished; keep only the live one
+        return self._locks[loop]
 
     async def acquire(self) -> None:
         if self._per_minute <= 0:
             return
-        async with self._lock:
+        async with self._lock():
             while True:
                 now = self._clock()
                 while self._calls and now - self._calls[0] >= 60.0:
