@@ -48,6 +48,10 @@ const en = {
   dribbling: "Dribbling",
   defending: "Defending",
   stamina: "Stamina",
+  passMap: "Pass map",
+  completed: "Completed",
+  failed: "Failed",
+  noPasses: "No passes recorded yet.",
 };
 
 type Strings = typeof en;
@@ -103,6 +107,10 @@ const STRINGS: Record<Language, Strings> = {
     dribbling: "Dribble",
     defending: "Défense",
     stamina: "Endurance",
+    passMap: "Carte des passes",
+    completed: "Réussies",
+    failed: "Manquées",
+    noPasses: "Aucune passe enregistrée pour l'instant.",
   },
   ar: {
     tagline: "ذكاء المباراة مباشرة",
@@ -152,6 +160,10 @@ const STRINGS: Record<Language, Strings> = {
     dribbling: "المراوغة",
     defending: "الدفاع",
     stamina: "التحمل",
+    passMap: "خريطة التمريرات",
+    completed: "ناجحة",
+    failed: "فاشلة",
+    noPasses: "لا توجد تمريرات مسجلة بعد.",
   },
   es: {
     tagline: "Inteligencia del partido en directo",
@@ -201,6 +213,10 @@ const STRINGS: Record<Language, Strings> = {
     dribbling: "Regate",
     defending: "Defensa",
     stamina: "Resistencia",
+    passMap: "Mapa de pases",
+    completed: "Completados",
+    failed: "Fallados",
+    noPasses: "Aún no hay pases registrados.",
   },
 };
 

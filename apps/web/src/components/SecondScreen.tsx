@@ -10,7 +10,7 @@ import { closestSegment, segmentKey, type Profile } from "@/lib/segments";
 import { useMatch, useNow } from "@/lib/useMatch";
 
 import { Brand, BroadcastFrame, ReplayControls, StatusPill } from "./controls";
-import { InsightFeed, MatchHeader, PlayerFocus, ProfilePanel, StatsPanel } from "./fan";
+import { InsightFeed, MatchHeader, PassMap, PlayerFocus, ProfilePanel, StatsPanel } from "./fan";
 import { ExternalIcon } from "./ui";
 
 /** The fan's second screen: header, broadcast preview, personalised insights, stats, player focus. */
@@ -84,6 +84,7 @@ export function SecondScreen({ feed, initialProfile }: { feed: FeedParams; initi
         </div>
         <div className="order-3 space-y-4">
           <StatsPanel state={state} language={language} />
+          {profile.persona === "analyst" && <PassMap state={state} language={language} club={profile.club} player={profile.player} />}
         </div>
       </main>
     </div>
