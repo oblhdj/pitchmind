@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 
 import type {
   AgentName,
@@ -28,6 +28,7 @@ import {
   team as teamOf,
   type MatchState,
 } from "@/lib/match";
+import { passLines, upToClock } from "@/lib/metrics";
 import { LANGUAGES, PERSONAS, type Profile } from "@/lib/segments";
 
 import { TeamCrest } from "./broadcast";
@@ -555,6 +556,94 @@ export function StatsPanel({ state, language }: { state: MatchState; language: L
       ) : (
         <p className="text-sm text-slate-500">…</p>
       )}
+    </section>
+  );
+}
+
+const PASS_COLORS = { completed: "#34f5c5", failed: "#ff3d5a" } as const;
+
+function LineSwatch({ color, dashed }: { color: string; dashed?: boolean }) {
+  return (
+    <svg width="16" height="6" aria-hidden>
+      <line x1="1" y1="3" x2="15" y2="3" stroke={color} strokeWidth="2" strokeLinecap="round" strokeDasharray={dashed ? "3 3" : undefined} />
+    </svg>
+  );
+}
+
+/** Passes on a flat pitch, completed vs failed, for the selected club or player when there is one. */
+export function PassMap({
+  state,
+  language,
+  club,
+  player,
+}: {
+  state: MatchState;
+  language: Language;
+  club: TeamSide | null;
+  player: string | null;
+}) {
+  const meta = state.meta;
+  // Events change far less often than the clock ticks: sort once per new event, cut per tick.
+  const lines = useMemo(() => passLines(Object.values(state.events), { club, player }), [state.events, club, player]);
+  const passes = upToClock(lines, state.clock);
+  const completed = passes.filter((p) => p.completed).length;
+  const failed = passes.length - completed;
+  const focus = player ? playerName(meta, player) : club ? (teamOf(meta, club)?.short_name ?? club) : null;
+  const label = `${t(language, "passMap")}: ${completed} ${t(language, "completed")}, ${failed} ${t(language, "failed")}`;
+  return (
+    <section data-testid="pass-map" className="panel p-4">
+      <SectionTitle aside={focus && <Badge tone="gold">{focus}</Badge>}>{t(language, "passMap")}</SectionTitle>
+      <div dir="ltr">
+        <div className="mb-1.5 flex items-center gap-4 text-[0.7rem] text-slate-400">
+          <span className="flex items-center gap-1.5">
+            <LineSwatch color={PASS_COLORS.completed} />
+            {t(language, "completed")}
+            <span className="font-display text-sm font-bold tabular-nums text-white">{completed}</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <LineSwatch color={PASS_COLORS.failed} dashed />
+            {t(language, "failed")}
+            <span className="font-display text-sm font-bold tabular-nums text-white">{failed}</span>
+          </span>
+        </div>
+        <svg viewBox="-2 -2 109 72" className="w-full" role="img" aria-label={label}>
+          <rect x="-2" y="-2" width="109" height="72" rx="3" fill="rgb(255 255 255 / 0.025)" />
+          <g fill="none" stroke="white" strokeOpacity="0.15" strokeWidth="0.35">
+            <rect x="0" y="0" width="105" height="68" />
+            <line x1="52.5" y1="0" x2="52.5" y2="68" />
+            <circle cx="52.5" cy="34" r="9.15" />
+            <rect x="0" y="13.84" width="16.5" height="40.32" />
+            <rect x="88.5" y="13.84" width="16.5" height="40.32" />
+            <rect x="0" y="24.84" width="5.5" height="18.32" />
+            <rect x="99.5" y="24.84" width="5.5" height="18.32" />
+          </g>
+          {passes.map(({ event, completed: ok, from, to }) => {
+            const color = ok ? PASS_COLORS.completed : PASS_COLORS.failed;
+            return (
+              <g key={event.id} data-testid="pass" data-completed={ok} className="opacity-80 transition-opacity hover:opacity-100">
+                <title>{`${broadcastMinute(event.minute, event.phase)} ${eventTypeName(language, event.type)} · ${eventDetail(event, meta, language)}`}</title>
+                <line x1={from[0]} y1={from[1]} x2={to[0]} y2={to[1]} stroke="transparent" strokeWidth="3" />
+                <line
+                  x1={from[0]}
+                  y1={from[1]}
+                  x2={to[0]}
+                  y2={to[1]}
+                  stroke={color}
+                  strokeWidth="0.65"
+                  strokeLinecap="round"
+                  strokeDasharray={ok ? undefined : "1.4 1.1"}
+                />
+                <circle cx={to[0]} cy={to[1]} r="0.95" fill={color} />
+              </g>
+            );
+          })}
+        </svg>
+        <div className="mt-1 flex justify-between text-[0.7rem] font-semibold uppercase tracking-wider">
+          <span style={{ color: bright(meta?.home.colors.primary, 30) }}>{meta?.home.short_name ?? "HOME"} →</span>
+          <span style={{ color: bright(meta?.away.colors.primary, 5) }}>← {meta?.away.short_name ?? "AWAY"}</span>
+        </div>
+      </div>
+      {passes.length === 0 && <p className="mt-2 text-sm text-slate-500">{t(language, "noPasses")}</p>}
     </section>
   );
 }

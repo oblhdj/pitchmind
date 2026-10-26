@@ -2,7 +2,9 @@
 
 Stage 4 of the pipeline. It decides *where* (slot), *when* (``show_at`` in match time),
 *how long* and *how important* each graphic is, and keeps graphics in the same slot from
-overlapping: a new lower third waits for the previous one to clear, unless it is a goal.
+overlapping: a new lower third waits 20 s after the previous one clears, unless it is a goal.
+A lower third the queue would hold more than 45 s is stale by then and is dropped; its insight
+still reaches the second screen and the studio.
 """
 
 from __future__ import annotations
@@ -57,6 +59,8 @@ DECIMAL_COMMA = frozenset({Language.FR, Language.ES})
 
 LEAD_S = 1.0  # a graphic appears this long (match time) after it is rendered
 GAP_S = 2.0  # minimum clear time between two graphics in the same slot
+LOWER_THIRD_GAP_S = 20.0  # lower thirds never flood the screen: at most one per 20 s per segment
+MAX_LOWER_THIRD_DELAY_S = 45.0  # a lower third the queue would hold longer than this is dropped
 PREEMPT_PRIORITY = 95  # goals and full-time cut in immediately
 TITLE_MAX, BODY_MAX = 60, 600  # Overlay contract limits
 
@@ -76,17 +80,28 @@ def format_number(value: float, language: Language) -> str:
 
 
 class OverlayRenderer:
-    """Feed it every wire message in order; it returns the overlays to publish."""
+    """Feed it every wire message in order; it returns the overlays to publish.
+
+    A live feed loops matches: a new match id starts afresh (its clock starts again at 0), even
+    when one of its moments overtakes its metadata on the bus, and late messages of a finished
+    match are ignored.
+    """
 
     def __init__(self, segments: Sequence[Segment]) -> None:
         self.segments = tuple(segments)
         self.clock = 0.0
         self.meta: MatchMeta | None = None
+        self._match_id: str | None = None
+        self._finished: set[str] = set()
         self._moments: dict[str, Moment] = {}
         self._slot_free_at: dict[tuple[str, OverlaySlot], float] = {}
         self._rendered: set[str] = set()
 
     def observe(self, message: MatchMeta | MatchEvent | StatSnapshot | Moment | Insight | Overlay) -> list[Overlay]:
+        if message.match_id != self._match_id:
+            if message.match_id in self._finished:
+                return []  # a late message of a finished match
+            self._next_match(message.match_id)
         match message:
             case MatchMeta():
                 self.meta = message
@@ -104,12 +119,27 @@ class OverlayRenderer:
                 pass
         return []
 
+    def _next_match(self, match_id: str) -> None:
+        if self._match_id is not None:
+            self._finished.add(self._match_id)
+        self._match_id = match_id
+        self.meta = None  # until this match's own metadata arrives
+        self.clock = 0.0
+        self._moments.clear()
+        self._slot_free_at.clear()
+        self._rendered.clear()
+
     # ------------------------------------------------------------- scheduling
 
-    def _schedule(self, segment_key: str, slot: OverlaySlot, duration: float, priority: int) -> float:
+    def _schedule(self, segment_key: str, slot: OverlaySlot, duration: float, priority: int) -> float | None:
+        """When the graphic airs, or None to drop a lower third the queue would hold too long."""
         start = self.clock + LEAD_S
         free_at = self._slot_free_at.get((segment_key, slot), 0.0)
-        show_at = start if priority >= PREEMPT_PRIORITY else max(start, free_at + GAP_S)
+        gap = LOWER_THIRD_GAP_S if slot is OverlaySlot.LOWER_THIRD else GAP_S
+        show_at = start if priority >= PREEMPT_PRIORITY else max(start, free_at + gap)
+        # Only the wait the queue adds counts (match time), never agent latency.
+        if slot is OverlaySlot.LOWER_THIRD and show_at - start > MAX_LOWER_THIRD_DELAY_S:
+            return None  # the slot stays free for the next one
         self._slot_free_at[(segment_key, slot)] = max(free_at, show_at + duration)
         return round(show_at, 1)
 
@@ -123,12 +153,15 @@ class OverlayRenderer:
         moment = self._moments.get(insight.moment_id or "")
         slot, duration = SLOTS.get(insight.kind, (OverlaySlot.LOWER_THIRD, 7.0))
         priority = priority_for(moment.importance if moment else 0.5)
+        show_at = self._schedule(insight.segment.key, slot, duration, priority)
+        if show_at is None:
+            return None  # stale: no graphic, the insight itself is untouched
         evidence = sorted({e for claim in insight.claims for e in claim.evidence})
         return Overlay(
             overlay_id=overlay_id,
             match_id=insight.match_id,
             insight_id=insight.id,
-            show_at=self._schedule(insight.segment.key, slot, duration, priority),
+            show_at=show_at,
             duration_s=duration,
             slot=slot,
             priority=priority,
@@ -158,12 +191,15 @@ class OverlayRenderer:
             if overlay_id in self._rendered:
                 continue
             self._rendered.add(overlay_id)
+            show_at = self._schedule(segment.key, slot, duration, priority)
+            if show_at is None:
+                continue  # never for player tags (only lower thirds are dropped); narrows the type
             lang = segment.language
             overlays.append(
                 Overlay(
                     overlay_id=overlay_id,
                     match_id=moment.match_id,
-                    show_at=self._schedule(segment.key, slot, duration, priority),
+                    show_at=show_at,
                     duration_s=duration,
                     slot=slot,
                     priority=priority,

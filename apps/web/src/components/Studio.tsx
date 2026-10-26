@@ -1,10 +1,11 @@
 "use client";
 
-import { setDecision, clearDecisions, useHeld } from "@/lib/approvals";
+import { setDecision, clearDecisions, useHeld, type Decision } from "@/lib/approvals";
+import { decisionEntry, recordAudit, releaseEntry, useAuditLog, type AuditEntry } from "@/lib/audit";
 import type { Insight } from "@/lib/contracts";
 import { broadcastMinute } from "@/lib/format";
 import { kindName, LANGUAGE_NAMES, personaName, isRtl } from "@/lib/i18n";
-import { insightsFor, knownSegments, minuteOf, playerName, scoreLine, type MatchState } from "@/lib/match";
+import { currentMinute, insightsFor, knownSegments, minuteOf, playerName, scoreLine, type MatchState } from "@/lib/match";
 import type { FeedParams } from "@/lib/options";
 import { parseSegmentKey } from "@/lib/segments";
 import { useMatch, useNow } from "@/lib/useMatch";
@@ -12,7 +13,7 @@ import { useMatch, useNow } from "@/lib/useMatch";
 import { TeamCrest } from "./broadcast";
 import { Brand, BroadcastFrame, ReplayControls, StatusPill } from "./controls";
 import { AgentTrace } from "./fan";
-import { Badge, CheckIcon } from "./ui";
+import { Badge, CheckIcon, ChevronIcon } from "./ui";
 
 /** The producer's view: every active segment side by side, with a hold / approve switch per insight. */
 export function Studio({ feed, segments }: { feed: FeedParams; segments: readonly string[] }) {
@@ -31,6 +32,10 @@ export function Studio({ feed, segments }: { feed: FeedParams; segments: readonl
   const latencies = all.map((i) => i.latency_ms).filter((v): v is number => v != null && v > 0);
   const avgLatency = latencies.length ? latencies.reduce((a, b) => a + b, 0) / latencies.length / 1000 : null;
   const score = scoreLine(state);
+  const releaseAll = () => {
+    clearDecisions();
+    if (heldNow > 0) recordAudit(releaseEntry(heldNow, currentMinute(state), Date.now()));
+  };
 
   return (
     <div className="min-h-dvh">
@@ -62,13 +67,15 @@ export function Studio({ feed, segments }: { feed: FeedParams; segments: readonl
           {avgLatency != null && <Stat label="Avg agent latency" value={`${avgLatency.toFixed(1)} s`} />}
           <button
             type="button"
-            onClick={clearDecisions}
+            onClick={releaseAll}
             className="ms-auto rounded-lg px-3 py-1.5 text-slate-300 ring-1 ring-white/10 transition hover:bg-white/5 hover:text-white"
           >
             Release all holds
           </button>
         </div>
       </header>
+
+      <AuditTrail state={state} />
 
       <main data-testid="studio-grid" className="mx-auto grid max-w-[1800px] gap-4 px-4 py-5 md:grid-cols-2 2xl:grid-cols-4">
         {keys.length === 0 && <p className="text-sm text-slate-400">Waiting for the first insights…</p>}
@@ -87,6 +94,75 @@ function Stat({ label, value, tone }: { label: string; value: string | number; t
       <span className="text-slate-400">{label}</span>
       <span className={`font-display text-sm font-bold tabular-nums ${color}`}>{value}</span>
     </span>
+  );
+}
+
+const ACTIONS: Record<AuditEntry["action"], { label: string; tone: "mint" | "gold" | "slate" }> = {
+  approved: { label: "On air", tone: "mint" },
+  held: { label: "Hold", tone: "gold" },
+  released_all: { label: "Release all", tone: "slate" },
+};
+
+function segmentLabel(key: string, state: MatchState): string {
+  const profile = parseSegmentKey(key);
+  if (!profile) return key;
+  const parts = [personaName("en", profile.persona), LANGUAGE_NAMES[profile.language]];
+  if (profile.club) parts.push(`fan of ${state.meta?.[profile.club].short_name ?? profile.club}`);
+  if (profile.player) parts.push(`follows ${playerName(state.meta, profile.player)}`);
+  return parts.join(" · ");
+}
+
+/** Every hold / approve decision of this browser's studio tabs, newest first. */
+function AuditTrail({ state }: { state: MatchState }) {
+  const log = useAuditLog();
+  return (
+    <section className="mx-auto max-w-[1800px] px-4 pt-5">
+      <details open data-testid="audit-trail" className="panel group px-3 py-2">
+        <summary className="flex cursor-pointer list-none items-center gap-2 py-1 [&::-webkit-details-marker]:hidden">
+          <span className="eyebrow text-slate-400">Audit trail</span>
+          <Badge>{log.length}</Badge>
+          <span className="text-xs text-slate-500">hold / approve decisions, newest first</span>
+          <ChevronIcon className="ms-auto text-slate-500 transition group-open:rotate-180" />
+        </summary>
+        {log.length === 0 ? (
+          <p className="py-2 text-xs text-slate-500">No decisions yet: every hold and approve is logged here.</p>
+        ) : (
+          <ol className="mt-1 max-h-44 divide-y divide-white/5 overflow-y-auto text-xs">
+            {log.map((entry) => (
+              <li
+                key={entry.id}
+                data-testid="audit-entry"
+                data-action={entry.action}
+                className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1.5"
+              >
+                <time dateTime={new Date(entry.at).toISOString()} className="font-mono tabular-nums text-slate-400">
+                  {new Date(entry.at).toLocaleTimeString("en-GB", { hour12: false })}
+                </time>
+                <span className="w-12 font-display text-sm font-semibold tabular-nums text-slate-300">
+                  {entry.minute != null ? broadcastMinute(entry.minute, entry.phase) : "—"}
+                </span>
+                <Badge tone={ACTIONS[entry.action].tone}>{ACTIONS[entry.action].label}</Badge>
+                {entry.action === "released_all" ? (
+                  <span className="text-slate-300">
+                    {entry.count} held insight{entry.count === 1 ? "" : "s"} back on air
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-slate-400">{segmentLabel(entry.segment, state)}</span>
+                    <span dir="auto" className="min-w-0 flex-1 truncate text-left font-semibold text-white">
+                      {entry.headline}
+                    </span>
+                    <code dir="ltr" className="font-mono text-[0.65rem] text-slate-500">
+                      {entry.insightId}
+                    </code>
+                  </>
+                )}
+              </li>
+            ))}
+          </ol>
+        )}
+      </details>
+    </section>
   );
 }
 
@@ -131,6 +207,11 @@ function SegmentColumn({
 
 function StudioCard({ insight, state, held }: { insight: Insight; state: MatchState; held: boolean }) {
   const minute = minuteOf(state, insight);
+  const decide = (decision: Decision) => {
+    if ((decision === "held") === held) return; // already so: nothing changes, nothing to log
+    setDecision(insight.id, decision);
+    recordAudit(decisionEntry(insight, decision, currentMinute(state), Date.now()));
+  };
   return (
     <li
       data-testid="studio-card"
@@ -156,7 +237,7 @@ function StudioCard({ insight, state, held }: { insight: Insight; state: MatchSt
             role="radio"
             aria-checked={!held}
             data-testid="approve-toggle"
-            onClick={() => setDecision(insight.id, "approved")}
+            onClick={() => decide("approved")}
             className={`rounded-md px-2.5 py-1 font-semibold transition ${!held ? "bg-mint text-ink-950" : "text-slate-400 hover:text-white"}`}
           >
             On air
@@ -166,7 +247,7 @@ function StudioCard({ insight, state, held }: { insight: Insight; state: MatchSt
             role="radio"
             aria-checked={held}
             data-testid="hold-toggle"
-            onClick={() => setDecision(insight.id, "held")}
+            onClick={() => decide("held")}
             className={`rounded-md px-2.5 py-1 font-semibold transition ${held ? "bg-gold text-ink-950" : "text-slate-400 hover:text-white"}`}
           >
             Hold

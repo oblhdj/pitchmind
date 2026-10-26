@@ -37,6 +37,20 @@ test("second screen: a template fallback carries the auto badge", async ({ page 
   await expect(fallback.getByTestId("auto-badge")).toBeVisible();
 });
 
+test("second screen: the analyst view has a pass map, filtered to the chosen club", async ({ page }) => {
+  await page.goto("/?persona=analyst&club=away&from=600"); // Harbour's pass at 546 s has been played
+  const passes = page.getByTestId("pass-map").getByTestId("pass");
+  await expect(passes).toHaveCount(1);
+  await expect(passes.first()).toHaveAttribute("data-completed", "true");
+  await page.goto("/?persona=analyst&club=home&from=600");
+  await expect(page.getByTestId("insight-card").first()).toContainText("Harbour"); // the history is in
+  await expect(page.getByTestId("pass-map")).toBeVisible();
+  await expect(page.getByTestId("pass-map").getByTestId("pass")).toHaveCount(0);
+  await page.goto("/?persona=casual&from=600");
+  await expect(page.getByTestId("insight-card").first()).toContainText("Harbour");
+  await expect(page.getByTestId("pass-map")).toHaveCount(0);
+});
+
 test("overlay page: transparent, segment from the URL, right to left for Arabic", async ({ page }) => {
   await page.goto(`/overlay?segment=${encodeURIComponent(ARABIC)}&from=550`);
   const lowerThird = page.getByTestId("overlay-lower_third");
@@ -54,4 +68,20 @@ test("studio: every segment side by side, and a held insight leaves the air", as
   await expect(card).toHaveAttribute("data-held", "true");
   await card.getByTestId("approve-toggle").click();
   await expect(card).toHaveAttribute("data-held", "false");
+  const audit = page.getByTestId("audit-trail").getByTestId("audit-entry");
+  await expect(audit).toHaveCount(2);
+  await expect(audit.first()).toHaveAttribute("data-action", "approved"); // newest first
+  await expect(audit.last()).toHaveAttribute("data-action", "held");
+});
+
+test("studio: a decision in one studio tab shows in the other's audit trail", async ({ page, context }) => {
+  await page.goto("/studio?from=600");
+  await expect(page.getByTestId("studio-card").first()).toBeVisible(); // compiled before the second tab asks
+  const other = await context.newPage();
+  await other.goto("/studio?from=600");
+  await expect(other.getByTestId("studio-card").first()).toBeVisible();
+  await page.getByTestId("studio-card").first().getByTestId("hold-toggle").click();
+  const audit = other.getByTestId("audit-trail").getByTestId("audit-entry");
+  await expect(audit).toHaveCount(1);
+  await expect(audit.first()).toHaveAttribute("data-action", "held");
 });
