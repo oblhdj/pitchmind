@@ -72,6 +72,8 @@ class Gateway:
         """Remember the message for late joiners, record it, and push it to live clients."""
         match message:
             case MatchMeta():
+                if self.meta is not None and self.meta.match_id == message.match_id:
+                    return  # the simulator's re-announcement: clients already have it
                 self._reset(message)
             case MatchEvent():
                 self.events.append(message)

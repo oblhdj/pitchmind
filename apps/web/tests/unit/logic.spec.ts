@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
-import type { Overlay, WireMessage } from "../../src/lib/contracts";
-import { catalogOf, dueUntil, parseStream } from "../../src/lib/feed";
+import type { MatchEvent, MatchMeta, Overlay, WireMessage } from "../../src/lib/contracts";
+import { catalogOf, dueUntil, LiveFeed, parseStream } from "../../src/lib/feed";
 import { broadcastMinute } from "../../src/lib/format";
 import { initialState, insightsFor, onAir, reduce, type MatchState } from "../../src/lib/match";
 import { feedParams, profileParams } from "../../src/lib/options";
@@ -74,6 +74,30 @@ test("history replayed by a seek never goes on air", () => {
   const insights = insightsFor(state, ANALYST);
   expect(insights.length).toBeGreaterThan(5);
   expect(insights[0]?.t).toBeGreaterThan(insights.at(-1)?.t ?? 0); // newest first
+});
+
+test("the next match of a live loop starts from a clean state and clock", () => {
+  const items = parseStream(STREAM).map((i) => i.msg);
+  const meta = items[0] as MatchMeta;
+  const late = items.filter((m): m is MatchEvent => m.msg === "match_event").at(-1) as MatchEvent;
+  const overlay = items.find((m): m is Overlay => m.msg === "overlay") as Overlay;
+  const next: MatchMeta = { ...meta, match_id: "M002" };
+
+  const played = play([meta, late, meta], 1000);
+  expect(Object.keys(played.events)).toHaveLength(1); // a re-announcement keeps the match
+  const fresh = play([meta, late, next], 1000);
+  expect(fresh.meta?.match_id).toBe("M002");
+  expect(fresh.events).toEqual({}); // the old event ids would shadow the new match's
+
+  // Without a clock reset, an overlay of the new match would look long overdue and air at once.
+  const feed = new LiveFeed("ws://unused", null);
+  const emitted: WireMessage[] = [];
+  feed.subscribe((e) => {
+    if (e.type === "message") emitted.push(e.msg);
+  });
+  const receive = (msg: WireMessage) => (feed as unknown as { receive(data: string): void }).receive(JSON.stringify(msg));
+  [meta, late, next, { ...overlay, match_id: "M002", show_at: 10 }].forEach(receive);
+  expect(emitted.map((m) => m.msg)).toEqual(["match_meta", "match_event", "match_meta"]);
 });
 
 test("URL options", () => {

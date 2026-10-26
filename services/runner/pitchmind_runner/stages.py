@@ -51,32 +51,57 @@ def consume(bus: Bus, topics: Sequence[Topic], group: str, handler: Handler) -> 
     return run()
 
 
-async def simulator_stage(bus: Bus, meta: MatchMeta, scenario: Scenario, seed: int, speed: float) -> None:
-    """Play the match onto ``match-events``. ``speed`` 0 means as fast as possible."""
+async def simulator_stage(
+    bus: Bus, meta: MatchMeta, scenario: Scenario, seed: int, speed: float, meta_every_s: float = 0
+) -> None:
+    """Play the match onto ``match-events``. ``speed`` 0 means as fast as possible.
+
+    ``meta_every_s`` > 0 re-announces the match metadata that often (wall clock), so a stage
+    that starts or restarts mid-match (separate Container Apps reading from the latest
+    position) still learns the match instead of ignoring it until the next kick-off.
+    """
     loop = asyncio.get_running_loop()
-    started = loop.time()
+    started = announced = loop.time()
     for message in MatchEngine(meta, scenario, seed).run():
         if isinstance(message, MatchEvent):
             if speed > 0:
                 await asyncio.sleep(max(0.0, started + message.t / speed - loop.time()))
             else:
                 await asyncio.sleep(0)  # let the consumers run
+            if meta_every_s > 0 and loop.time() - announced >= meta_every_s:
+                await bus.publish(Topic.MATCH_EVENTS, meta)
+                announced = loop.time()
         await bus.publish(Topic.MATCH_EVENTS, message)
     logger.info("simulator: match %s finished", meta.match_id)
 
 
+def warn_once(stage: str) -> Callable[[str], None]:
+    """Log, once per match, that ``stage`` gets messages for a match whose metadata it has not seen."""
+    warned: set[str] = set()
+
+    def warn(match_id: str) -> None:
+        if match_id not in warned:
+            warned.add(match_id)
+            logger.warning(
+                "%s: no metadata yet for match %s; its messages are skipped until it arrives", stage, match_id
+            )
+
+    return warn
+
+
 def stats_stage(bus: Bus) -> Stage:
     engines: dict[str, StatsEngine] = {}
+    unknown = warn_once("stats")
 
     async def handle(message: Wire) -> None:
         if isinstance(message, MatchMeta):
-            engines[message.match_id] = StatsEngine(message)
-        elif (
-            isinstance(message, MatchEvent)
-            and (engine := engines.get(message.match_id))
-            and (snapshot := engine.apply(message)) is not None
-        ):
-            await bus.publish(Topic.MATCH_STATS, snapshot)
+            if message.match_id not in engines:  # a repeat is the simulator's re-announcement
+                engines[message.match_id] = StatsEngine(message)
+        elif isinstance(message, MatchEvent):
+            if (engine := engines.get(message.match_id)) is None:
+                unknown(message.match_id)
+            elif (snapshot := engine.apply(message)) is not None:
+                await bus.publish(Topic.MATCH_STATS, snapshot)
 
     return consume(bus, [Topic.MATCH_EVENTS], "stats", handle)
 
@@ -84,6 +109,7 @@ def stats_stage(bus: Bus) -> Stage:
 def moments_stage(bus: Bus) -> Stage:
     detectors: dict[str, MomentDetector] = {}
     ready: dict[str, asyncio.Event] = {}
+    unknown = warn_once("moments")
 
     def gate(match_id: str) -> asyncio.Event:
         return ready.setdefault(match_id, asyncio.Event())
@@ -94,10 +120,14 @@ def moments_stage(bus: Bus) -> Stage:
 
     async def handle(message: Wire) -> None:
         if isinstance(message, MatchMeta):
-            detectors[message.match_id] = MomentDetector(message)
+            if message.match_id not in detectors:  # a repeat is the simulator's re-announcement
+                detectors[message.match_id] = MomentDetector(message)
             gate(message.match_id).set()
-        elif isinstance(message, MatchEvent) and (detector := detectors.get(message.match_id)):
-            await publish(detector.on_event(message))
+        elif isinstance(message, MatchEvent):
+            if (detector := detectors.get(message.match_id)) is None:
+                unknown(message.match_id)
+            else:
+                await publish(detector.on_event(message))
         elif isinstance(message, StatSnapshot):
             await gate(message.match_id).wait()  # stats never outrun the match metadata
             await publish(detectors[message.match_id].on_snapshot(message))
