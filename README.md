@@ -44,10 +44,11 @@ Measured live on Foundry Phi-4, with the match at 4× speed:
 
 | | |
 |---|---|
-| Rate-limit errors | **0** (down from 71%) |
-| Stale frames | **0** |
+| Rate-limit errors | **0** (71% of model calls before per-model rate limiting) |
+| Stale frames from the previous match | **0** |
 | Insights written by the AI | **~31 of 37**; the rest used the verified template fallback |
 | Moment → insight, p50 | **~41 s** |
+| Per-agent p50 | explain 7.2 s · narrative 8.2 s · recap 9.8 s · persona 8.6 s · language 10.2 s |
 | Planted wrong numbers (`demo.ps1 plant`) | **6 of 6** rejected by the Verifier; none reached fans |
 
 ## Architecture
