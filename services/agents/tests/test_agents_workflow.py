@@ -81,10 +81,12 @@ def test_writer_wrong_twice_falls_back_to_template_everywhere() -> None:
     assert len(writer.prompts) == 2
     for insight in insights.values():
         assert insight.fallback and insight.verified
-        assert insight.body == "Goal for Harbour United: Halvorsen scores after 9 minutes."
         assert insight.claims[0].evidence == [130, 131, 132]
         assert insight.agent_trace == [ORCH, N, V, N, V, T]
+    assert insights[EN_KEY].body == "Goal for Harbour United: Halvorsen scores after 9 minutes."
     assert insights[AR_KEY].headline == "هدف!"
+    assert insights[AR_KEY].body.startswith("هدف في الدقيقة 9 لصالح Harbour United.")
+    assert insights[FR_KEY].body.startswith("But à la 9e minute pour Harbour United.")
 
 
 def test_persona_rejection_loops_back_once() -> None:

@@ -65,6 +65,7 @@ class MomentJob:
             trace=trace,
             latency_ms=self.elapsed_ms(),
             phase=self.facts.phase,
+            facts=self.facts,
         )
         record_fallback(segment.key, insight.agent_trace)
         return insight
