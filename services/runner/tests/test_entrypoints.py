@@ -79,9 +79,11 @@ def test_runner_main_loads_the_env_file_and_stops_cleanly(
 
 def test_simulator_stage_loops_matches_with_new_ids(monkeypatch: pytest.MonkeyPatch) -> None:
     played: list[str] = []
+    announce_every: list[object] = []
 
-    async def fake_simulator(_bus: object, meta: Any, *_: object) -> None:
+    async def fake_simulator(_bus: object, meta: Any, *args: object) -> None:
         played.append(meta.match_id)
+        announce_every.append(args[-1])
 
     async def pause(_: float) -> None:
         if len(played) == 3:
@@ -91,8 +93,11 @@ def test_simulator_stage_loops_matches_with_new_ids(monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(asyncio, "sleep", pause)  # cloud calls asyncio.sleep between matches
     config = cloud.config_from_env({})
     with pytest.raises(asyncio.CancelledError):
-        asyncio.run(cloud.loop_matches(object(), config, 0))  # type: ignore[arg-type]
-    assert played == ["M001", "M002", "M003"]
+        asyncio.run(cloud.loop_matches(object(), config, 0, 20))  # type: ignore[arg-type]
+    # A per-process token: after a simulator restart, M001 is a new match, not the old one.
+    run = played[0].removeprefix("M001-")
+    assert len(run) == 6 and played == [f"M00{n}-{run}" for n in (1, 2, 3)]
+    assert announce_every == [20, 20, 20]
 
 
 class FakeBus:

@@ -234,6 +234,7 @@ export class LiveFeed extends BaseFeed implements Feed {
   private lastT = 0;
   private lastWall = 0;
   private rate = 1;
+  private matchId: string | null = null;
 
   constructor(
     private readonly url: string,
@@ -306,6 +307,14 @@ export class LiveFeed extends BaseFeed implements Feed {
       return;
     }
     if (!isWireMessage(value)) return;
+    if (value.msg === "match_meta" && value.match_id !== this.matchId) {
+      // The next match of the loop: its clock starts again at 0, and nothing pending belongs to it.
+      this.matchId = value.match_id;
+      this.lastT = 0;
+      this.lastWall = 0;
+      this.rate = 1;
+      this.pending = [];
+    }
     if (value.msg === "overlay" && value.show_at > this.clockNow()) {
       this.pending.push(value);
       return;

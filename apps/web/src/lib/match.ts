@@ -114,6 +114,11 @@ function insertSorted<T>(items: readonly T[], item: T, time: (x: T) => number): 
 function apply(state: MatchState, msg: WireMessage, now: number | null): MatchState {
   switch (msg.msg) {
     case "match_meta":
+      // A different match id is the next match of a looping live feed: its event ids start
+      // again at 0, so nothing of the previous match may be kept.
+      if (state.meta !== null && state.meta.match_id !== msg.match_id) {
+        return { ...initialState, status: state.status, detail: state.detail, catalog: state.catalog, meta: msg };
+      }
       return { ...state, meta: msg };
     case "match_event":
       return msg.id in state.events ? state : { ...state, events: { ...state.events, [msg.id]: msg } };
