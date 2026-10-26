@@ -3,6 +3,8 @@
 FROM node:22-alpine AS build
 WORKDIR /repo
 COPY contracts/ts ./contracts/ts
+# /api/mock-stream is force-static: next build reads the demo match from here
+COPY data/mock ./data/mock
 COPY apps/web/package.json apps/web/package-lock.json ./apps/web/
 WORKDIR /repo/apps/web
 RUN npm ci --no-audit --no-fund
