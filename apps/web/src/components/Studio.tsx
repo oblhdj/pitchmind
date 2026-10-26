@@ -12,7 +12,7 @@ import { useMatch, useNow } from "@/lib/useMatch";
 
 import { TeamCrest } from "./broadcast";
 import { Brand, BroadcastFrame, ReplayControls, StatusPill } from "./controls";
-import { AgentTrace } from "./fan";
+import { AgentTrace, Waiting } from "./fan";
 import { Badge, CheckIcon, ChevronIcon } from "./ui";
 
 /** The producer's view: every active segment side by side, with a hold / approve switch per insight. */
@@ -78,7 +78,7 @@ export function Studio({ feed, segments }: { feed: FeedParams; segments: readonl
       <AuditTrail state={state} />
 
       <main data-testid="studio-grid" className="mx-auto grid max-w-[1800px] gap-4 px-4 py-5 md:grid-cols-2 2xl:grid-cols-4">
-        {keys.length === 0 && <p className="text-sm text-slate-400">Waiting for the first insights…</p>}
+        {keys.length === 0 && <Waiting title="Waiting for the match feed" hint="Every segment appears here side by side once the feed starts." />}
         {keys.map((key) => (
           <SegmentColumn key={key} segment={key} state={state} now={now} held={held} />
         ))}
@@ -149,7 +149,8 @@ function AuditTrail({ state }: { state: MatchState }) {
                 ) : (
                   <>
                     <span className="text-slate-400">{segmentLabel(entry.segment, state)}</span>
-                    <span dir="auto" className="min-w-0 flex-1 truncate text-left font-semibold text-white">
+                    {/* At least 12rem: on a phone it wraps to its own line rather than shrink to "…". */}
+                    <span dir="auto" data-testid="audit-headline" className="min-w-48 flex-1 truncate text-left font-semibold text-white">
                       {entry.headline}
                     </span>
                     <code dir="ltr" className="font-mono text-[0.65rem] text-slate-500">
@@ -196,6 +197,9 @@ function SegmentColumn({
         <span className="ms-auto text-xs tabular-nums text-slate-500">{insights.length}</span>
       </div>
       <BroadcastFrame state={state} segment={segment} now={now} held={held} testId="studio-frame" />
+      {insights.length === 0 && (
+        <Waiting compact title="Watching the match" hint="This segment's first insight lands with the first key moment." />
+      )}
       <ol dir={isRtl(language) ? "rtl" : "ltr"} lang={language} className="flex flex-col gap-2">
         {insights.map((insight) => (
           <StudioCard key={insight.id} insight={insight} state={state} held={held.has(insight.id)} />
@@ -216,20 +220,34 @@ function StudioCard({ insight, state, held }: { insight: Insight; state: MatchSt
     <li
       data-testid="studio-card"
       data-held={held}
+      data-fallback={insight.fallback}
       className={`animate-rise rounded-xl p-3 ring-1 transition ${held ? "bg-gold/5 opacity-60 ring-gold/30" : "bg-ink-850/80 ring-white/7"}`}
     >
       <div className="flex flex-wrap items-center gap-1.5 text-xs">
         {minute && <span className="font-display font-semibold tabular-nums text-slate-400">{broadcastMinute(minute.minute, minute.phase)}</span>}
         <span className="eyebrow text-[0.62rem] text-slate-400">{kindName("en", insight.kind)}</span>
+        {/* Spelled out and larger than elsewhere: the demo video zooms in on recovery and the Verifier. */}
         {insight.verified && (
-          <Badge tone="mint">
-            <CheckIcon width={11} height={11} />
-          </Badge>
+          <span className="inline-flex items-center gap-1 rounded-full bg-mint/12 px-2 py-0.5 text-xs font-semibold text-mint ring-1 ring-mint/30">
+            <CheckIcon width={12} height={12} /> verified
+          </span>
         )}
-        {insight.fallback && <Badge tone="gold">auto</Badge>}
+        {insight.fallback && (
+          <span
+            data-testid="auto-badge"
+            title="Template text: published while the agents were unavailable"
+            className="inline-flex items-center rounded-full bg-gold/15 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-gold ring-1 ring-gold/40"
+          >
+            auto · template
+          </span>
+        )}
       </div>
-      <div className="mt-1 font-display text-base font-bold leading-snug text-white">{insight.headline}</div>
-      <p className="mt-0.5 line-clamp-3 text-xs leading-relaxed text-slate-300">{insight.body}</p>
+      <div dir="auto" className="mt-1 font-display text-base font-bold leading-snug text-white">
+        {insight.headline}
+      </div>
+      <p dir="auto" className="mt-0.5 line-clamp-3 text-xs leading-relaxed text-slate-300">
+        {insight.body}
+      </p>
       <div dir="ltr" className="mt-2 flex items-center gap-2">
         <div role="radiogroup" aria-label="Broadcast decision" className="flex rounded-lg bg-ink-950/70 p-0.5 text-xs ring-1 ring-white/5">
           <button
@@ -253,10 +271,14 @@ function StudioCard({ insight, state, held }: { insight: Insight; state: MatchSt
             Hold
           </button>
         </div>
-        <span className="min-w-0 flex-1 truncate">
-          <AgentTrace trace={insight.agent_trace} />
-        </span>
-        {insight.latency_ms != null && <span className="text-[0.65rem] tabular-nums text-slate-500">{(insight.latency_ms / 1000).toFixed(1)}s</span>}
+        {insight.latency_ms != null && (
+          <span className="ms-auto text-xs tabular-nums text-slate-400" title="End-to-end agent latency">
+            {(insight.latency_ms / 1000).toFixed(1)} s
+          </span>
+        )}
+      </div>
+      <div className="mt-2 border-t border-white/6 pt-2">
+        <AgentTrace trace={insight.agent_trace} size="md" />
       </div>
     </li>
   );

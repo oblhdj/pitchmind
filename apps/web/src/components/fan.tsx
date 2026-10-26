@@ -48,10 +48,12 @@ function TeamBlock({ team, align }: { team: Team | null; align: "start" | "end" 
     <div className={`flex min-w-0 items-center gap-3 ${align === "end" ? "flex-row-reverse text-end" : ""}`}>
       <TeamCrest team={team} size={52} className="shrink-0 drop-shadow-[0_6px_14px_rgb(0_0_0/0.5)]" />
       <div className="min-w-0">
-        <div className="truncate font-display text-xl font-bold uppercase leading-tight text-white sm:text-2xl">
-          {team?.name ?? "—"}
+        {/* A phone has room for the short name only: the full one would shrink to "NO…". */}
+        <div data-testid="team-name" className="truncate font-display text-xl font-bold uppercase leading-tight text-white sm:text-2xl">
+          <span className="sm:hidden">{team?.short_name ?? "—"}</span>
+          <span className="hidden sm:inline">{team?.name ?? "—"}</span>
         </div>
-        <div className="text-xs font-medium tracking-wide text-slate-400">{team?.formation}</div>
+        <div className="whitespace-nowrap text-xs font-medium tracking-wide text-slate-400">{team?.formation}</div>
       </div>
     </div>
   );
@@ -244,9 +246,7 @@ export function InsightFeed({
         </span>
       </SectionTitle>
       {insights.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-slate-400">
-          {t(language, "noInsights")}
-        </p>
+        <Waiting title={t(language, "noInsights")} hint={t(language, "noInsightsHint")} />
       ) : (
         <ol className="space-y-3">
           {insights.map((insight) => (
@@ -291,8 +291,13 @@ function InsightCard({ insight, state, language }: { insight: Insight; state: Ma
             )}
           </span>
         </div>
-        <h3 className="mt-1.5 font-display text-[1.35rem] font-bold leading-tight text-white">{insight.headline}</h3>
-        <p className="mt-1 text-[0.95rem] leading-relaxed text-slate-300">{insight.body}</p>
+        {/* dir="auto": a template text in another language keeps its own direction and punctuation. */}
+        <h3 dir="auto" className="mt-1.5 font-display text-[1.35rem] font-bold leading-tight text-white">
+          {insight.headline}
+        </h3>
+        <p dir="auto" className="mt-1 text-[0.95rem] leading-relaxed text-slate-300">
+          {insight.body}
+        </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button
             type="button"
@@ -307,7 +312,7 @@ function InsightCard({ insight, state, language }: { insight: Insight; state: Ma
           </button>
           <AgentTrace trace={insight.agent_trace} />
           {insight.latency_ms != null && (
-            <span className="ms-auto text-xs tabular-nums text-slate-500" title="End-to-end agent latency">
+            <span dir="ltr" data-testid="latency" className="ms-auto text-xs tabular-nums text-slate-500" title="End-to-end agent latency">
               {(insight.latency_ms / 1000).toFixed(1)} s
             </span>
           )}
@@ -318,16 +323,51 @@ function InsightCard({ insight, state, language }: { insight: Insight; state: Ma
   );
 }
 
-export function AgentTrace({ trace }: { trace: readonly AgentName[] }) {
+/** The agents that handled an insight, in order; "md" is the studio's size, legible when zoomed in. */
+export function AgentTrace({ trace, size = "sm" }: { trace: readonly AgentName[]; size?: "sm" | "md" }) {
+  const md = size === "md";
+  const tone = (agent: AgentName) =>
+    agent === "template" ? `text-gold${md ? " font-semibold" : ""}` : agent === "verifier" ? (md ? "font-semibold text-mint" : "text-mint/80") : "";
   return (
-    <span dir="ltr" className="flex flex-wrap items-center gap-1 text-[0.65rem] text-slate-500" title="Agents that handled this insight">
+    <span
+      dir="ltr"
+      data-testid="agent-trace"
+      className={`flex flex-wrap items-center ${md ? "gap-1.5 text-xs text-slate-300" : "gap-1 text-[0.65rem] text-slate-500"}`}
+      title="Agents that handled this insight"
+    >
       {trace.map((agent, i) => (
-        <span key={`${agent}-${i}`} className="flex items-center gap-1">
-          {i > 0 && <span className="text-slate-600">›</span>}
-          <span className={agent === "template" ? "text-gold" : agent === "verifier" ? "text-mint/80" : ""}>{agent}</span>
+        <span key={`${agent}-${i}`} className={`flex items-center ${md ? "gap-1.5" : "gap-1"}`}>
+          {i > 0 && <span className={md ? "text-slate-500" : "text-slate-600"}>›</span>}
+          <span className={tone(agent)}>{agent}</span>
         </span>
       ))}
     </span>
+  );
+}
+
+/** Before the first insight: the agents are at work and the feed is not broken. */
+export function Waiting({ title, hint, compact = false }: { title: string; hint: string; compact?: boolean }) {
+  return (
+    <div
+      data-testid="feed-waiting"
+      role="status"
+      className={`flex items-start gap-3 rounded-xl border border-dashed border-white/10 bg-white/[0.015] ${compact ? "p-3" : "px-4 py-6"}`}
+    >
+      <span className="relative mt-1.5 flex size-2.5 shrink-0" aria-hidden>
+        <span className="absolute inline-flex size-full animate-ping-slow rounded-full bg-mint" />
+        <span className="relative inline-flex size-2.5 rounded-full bg-mint" />
+      </span>
+      <div className="min-w-0 flex-1 space-y-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-200">{title}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-slate-400">{hint}</p>
+        </div>
+        <div className="space-y-1.5" aria-hidden>
+          <div className="h-2 w-3/4 animate-pulse rounded-full bg-white/6" />
+          <div className="h-2 w-1/2 animate-pulse rounded-full bg-white/4" />
+        </div>
+      </div>
+    </div>
   );
 }
 
