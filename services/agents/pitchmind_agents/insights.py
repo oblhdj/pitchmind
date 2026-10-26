@@ -6,6 +6,7 @@ from collections.abc import Sequence
 
 from pitchmind_contracts import AgentName, Claim, Insight, InsightKind, Language, Moment, MomentKind, Phase, Segment
 
+from .context import Facts
 from .schemas import Draft
 from .segments import slug
 
@@ -62,6 +63,14 @@ _HEADLINES: dict[Language, dict[str, str]] = {
 
 BODY_MAX = 1500  # Insight.body limit in the contract
 
+# Template bodies for the other languages: the detector's fallback_text is English only.
+# {what} is the headline, {team} the " for <team>" part, {score} the score sentence.
+_BODIES: dict[Language, tuple[str, str, str]] = {
+    Language.FR: ("{what} à la {minute}e minute{team}.{score}", " pour {name}", " Score : {line}."),
+    Language.AR: ("{what} في الدقيقة {minute}{team}.{score}", " لصالح {name}", " النتيجة: {line}."),
+    Language.ES: ("{what} en el minuto {minute}{team}.{score}", " para {name}", " Marcador: {line}."),
+}
+
 
 def _clip(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
@@ -72,6 +81,20 @@ def template_headline(language: Language, kind: MomentKind, phase: Phase | None 
     if kind is MomentKind.PHASE and phase in table:
         return table[phase]
     return table.get(kind, table[_DEFAULT])
+
+
+def template_body(language: Language, moment: Moment, facts: Facts | None, phase: Phase | None = None) -> str:
+    """The fallback body in the fan's language, from facts the pipeline produced (no new numbers)."""
+    if language not in _BODIES or facts is None:
+        return moment.fallback_text
+    sentence, for_team, score = _BODIES[language]
+    what = template_headline(language, moment.kind, phase).strip("!¡ ")
+    team = for_team.format(name=facts.team) if facts.team else ""
+    line = ""
+    if facts.score is not None:
+        home, away = facts.teams.get("home", ""), facts.teams.get("away", "")
+        line = score.format(line=f"{home} {facts.score['home']}-{facts.score['away']} {away}")
+    return sentence.format(what=what, minute=facts.minute, team=team, score=line)
 
 
 def insight_id(moment: Moment, segment: Segment) -> str:
@@ -124,11 +147,13 @@ def fallback_insight(
     trace: Sequence[AgentName],
     latency_ms: int,
     phase: Phase | None = None,
+    facts: Facts | None = None,
 ) -> Insight:
-    """Template text from the moment detector, so the overlay never goes blank.
+    """Template text, so the overlay never goes blank.
 
-    ``fallback_text`` is deterministic and built from the same metrics, so it counts as verified.
-    It stays in English; only the headline is localised.
+    English uses the detector's ``fallback_text``; other languages get a short localised
+    sentence built from ``facts`` (headline, minute, team, score). Both are deterministic and
+    built from pipeline data, so they count as verified. The claim keeps the detector's text.
     """
     trace = list(trace)
     if trace[-1:] != [AgentName.TEMPLATE]:
@@ -141,7 +166,7 @@ def fallback_insight(
         kind=kind,
         segment=segment,
         headline=template_headline(segment.language, moment.kind, phase),
-        body=_clip(moment.fallback_text, BODY_MAX),
+        body=_clip(template_body(segment.language, moment, facts, phase), BODY_MAX),
         claims=[Claim(text=moment.fallback_text, evidence=list(moment.evidence), metrics=dict(moment.metrics))],
         verified=True,
         fallback=True,

@@ -22,11 +22,13 @@ from pitchmind_agents import service as service_module
 from pitchmind_agents.__main__ import main as cli_main
 from pitchmind_agents.agents import CircuitBreaker
 from pitchmind_agents.clients import foundry_client_set
+from pitchmind_agents.numbers import unsupported_numbers
 from pitchmind_agents.routing import ROUTES, STAT_ALERTS, route
 from pitchmind_agents.runtime import load_env_file, replay
 from pitchmind_agents.segments import applies
 from pitchmind_agents.testing import MOCK_STREAM, Scripted, mock_messages, mock_moments, prime
-from pitchmind_contracts import AgentName, Insight, MomentKind, Overlay, Phase, Segment, parse_wire
+from pitchmind_agents.verifier import wrong_language
+from pitchmind_contracts import AgentName, Insight, Language, MomentKind, Overlay, Phase, Segment, parse_wire
 
 N = AgentName.NARRATIVE
 
@@ -165,7 +167,26 @@ def test_a_very_long_fallback_text_is_clipped_not_fatal() -> None:
     service = AgentsService(AgentTeam(mock_client_set(), AgentsConfig(disabled_agents=frozenset({N}))))
     goal = prime(service, "mom-M001-1").model_copy(update={"id": "mom-long", "fallback_text": "x" * 2000})
     insights = asyncio.run(service.process(goal))
-    assert all(i.fallback and len(i.body) == 1500 and i.body.endswith("…") for i in insights)
+    english = [i for i in insights if i.segment.language is Language.EN]
+    assert english and all(i.fallback and len(i.body) == 1500 and i.body.endswith("…") for i in english)
+
+
+def test_a_fallback_speaks_the_fans_language_with_only_pipeline_numbers() -> None:
+    """Live QA: the Arabic feed showed an Arabic template headline over an English body."""
+    service = AgentsService(AgentTeam(mock_client_set(), AgentsConfig(disabled_agents=frozenset({N}))))
+    goal = prime(service, "mom-M001-1")
+    facts = service.context(goal.match_id).facts_for(goal)
+    insights = {i.segment.language: i for i in asyncio.run(service.process(goal))}
+    assert insights[Language.EN].body == goal.fallback_text
+    assert insights[Language.FR].body.startswith(f"But à la {facts.minute}e minute pour {facts.team}.")
+    assert insights[Language.AR].body.startswith(f"هدف في الدقيقة {facts.minute}")
+    for language, insight in insights.items():
+        assert insight.fallback
+        assert not unsupported_numbers(insight.body, facts.allowed_numbers(), language), insight.body
+        words = insight.body
+        for name in facts.teams.values():  # names stay in Latin script by design
+            words = words.replace(name, "")
+        assert not wrong_language(words, language), insight.body
 
 
 def test_every_moment_kind_has_a_route(monkeypatch: pytest.MonkeyPatch) -> None:
