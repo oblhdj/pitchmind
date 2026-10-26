@@ -75,7 +75,16 @@ def check(draft: Draft, facts: Facts, language: Language = Language.EN, *, check
         if _MARKUP.search(text):
             issues.append(f"{where} contains markup, a link or control characters; write plain text")
         if bad_numbers := unsupported_numbers(text, allowed, language):
-            issues.append(f"{where} states {', '.join(bad_numbers)}, which is not in FACTS")
+            # Writers often copy event ids into the prose; "not in FACTS" alone does not tell them
+            # why, so the retry repeats the mistake. Name them for what they are.
+            ids = [n for n in bad_numbers if n.isdigit() and int(n) in evidence]
+            if ids:
+                issues.append(
+                    f"{where} writes event ids {', '.join(ids)}: event ids belong only in a claim's "
+                    "evidence, never in the headline, body or claim text"
+                )
+            if others := [n for n in bad_numbers if n not in ids]:
+                issues.append(f"{where} states {', '.join(others)}, which is not in FACTS")
         if bad_names := invented_first_names(text, facts):
             issues.append(f"{where} names {', '.join(bad_names)}, which does not match FACTS.players")
     if check_language:

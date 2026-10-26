@@ -5,7 +5,9 @@
 .EXAMPLE
   ./infra/deploy.ps1                                   # offline agents (mock model)
   ./infra/deploy.ps1 -Llm foundry -FoundryEndpoint https://pitchmind.services.ai.azure.com/api/projects/pitchmind `
-                     -FoundryStrong Phi-4 -FoundryFast Phi-4
+                     -FoundryStrong Phi-4 -FoundryFast Phi-4 -MatchSpeed 4
+                                                     # Phi-4-mini as the fast model was tried: ~20% of its calls hung
+                                                     # until the timeout and it translated metric keys, so Phi-4 does both
                                                      # also grants the app identity Azure AI User on the Foundry resource
 
 .NOTES
@@ -20,8 +22,9 @@ param(
     [string]$FoundryStrong = "",
     [string]$FoundryFast = "",
     [string]$FoundryResourceGroup = "pitchmind-foundry-pl",  # where the Foundry resource lives ("" = grant access yourself)
-    [string]$AgentRpm = "10",  # agent calls per minute with -Llm foundry (Phi-4: 20K tokens/min)
-    [string]$MatchSpeed = "6",
+    [string]$AgentRpm = "12",  # agent calls per minute per model deployment with -Llm foundry (Phi-4: 20K tokens/min, ~1.5K per call)
+    [string]$MinImportance = "0.5",  # moments below this get no AI text with -Llm foundry (keeps the quota for what matters)
+    [string]$MatchSpeed = "4",  # 4x: one Phi-4 deployment (12 calls/min) keeps up with the moments
     [switch]$LocalDocker  # build images with local Docker instead of ACR Tasks
 )
 $ErrorActionPreference = "Stop"
@@ -37,7 +40,7 @@ function Deploy([hashtable]$Extra) {
     $params = @(
         "location=$Location", "llm=$Llm", "matchSpeed=$MatchSpeed",
         "foundryProjectEndpoint=$FoundryEndpoint", "foundryModelStrong=$FoundryStrong", "foundryModelFast=$FoundryFast",
-        "foundryResourceGroup=$FoundryResourceGroup", "agentRpm=$AgentRpm"
+        "foundryResourceGroup=$FoundryResourceGroup", "agentRpm=$AgentRpm", "agentMinImportance=$MinImportance"
     ) + ($Extra.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" })
     $json = Invoke-Az deployment group create -g $ResourceGroup -f infra/main.bicep -p @params --query properties.outputs -o json
     return ($json | Out-String | ConvertFrom-Json)

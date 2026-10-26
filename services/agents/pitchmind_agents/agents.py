@@ -175,10 +175,13 @@ class CircuitBreaker:
 
 
 class RateLimiter:
-    """At most ``per_minute`` calls in any 60-second window, across all agents (0 = unlimited).
+    """At most ``per_minute`` calls in any 60-second window (0 = unlimited), and optionally at
+    most ``per_10s`` in any 10-second window.
 
     Callers wait for a free slot instead of being rejected with HTTP 429, so a burst of
     insights (a goal fans out to every segment) queues politely under the deployment's limit.
+    Foundry meters a per-minute limit over short windows, so a burst that fits the minute
+    can still be refused: ``per_10s`` spreads the calls out.
     """
 
     def __init__(
@@ -186,8 +189,11 @@ class RateLimiter:
         per_minute: int,
         clock: Callable[[], float] = time.monotonic,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        *,
+        per_10s: int = 0,
     ) -> None:
         self._per_minute = per_minute
+        self._per_10s = per_10s
         self._clock = clock
         self._sleep = sleep
         self._calls: deque[float] = deque()
@@ -208,10 +214,14 @@ class RateLimiter:
                 now = self._clock()
                 while self._calls and now - self._calls[0] >= 60.0:
                     self._calls.popleft()
-                if len(self._calls) < self._per_minute:
+                wait = 60.0 - (now - self._calls[0]) if len(self._calls) >= self._per_minute else 0.0
+                recent = [t for t in self._calls if now - t < 10.0]
+                if self._per_10s > 0 and len(recent) >= self._per_10s:
+                    wait = max(wait, 10.0 - (now - recent[-self._per_10s]))
+                if wait <= 0:
                     self._calls.append(now)
                     return
-                await self._sleep(60.0 - (now - self._calls[0]))
+                await self._sleep(wait)
 
 
 class AgentTeam:
@@ -236,7 +246,16 @@ class AgentTeam:
             for role in LLM_AGENTS
         }
         self._schema_in_prompt: set[str] = set()  # models seen ignoring response_format
-        self._limiter = RateLimiter(self.config.requests_per_minute, clock, sleep)
+        # One limiter per model deployment: each has its own quota (e.g. Phi-4 and Phi-4-mini).
+        self._clock = clock
+        self._limiters: dict[str, RateLimiter] = {}
+
+    def limiter(self, model: str) -> RateLimiter:
+        if model not in self._limiters:
+            rpm = self.config.requests_per_minute
+            # Rounded up: the per-minute window stays the binding limit (10 rpm -> 2 per 10 s, 10 per minute).
+            self._limiters[model] = RateLimiter(rpm, self._clock, self._sleep, per_10s=-(-rpm // 6))
+        return self._limiters[model]
 
     def model(self, role: AgentName) -> str | None:
         return self._models.get(role)
@@ -262,7 +281,7 @@ class AgentTeam:
         timeout_s = self.config.agent_timeout_s
         rate_limited = False
         while True:
-            await self._limiter.acquire()  # waiting for a slot does not count against the timeout
+            await self.limiter(model).acquire()  # waiting for a slot does not count against the timeout
             in_prompt = model in self._schema_in_prompt
             try:
                 async with asyncio.timeout(timeout_s):

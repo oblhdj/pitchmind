@@ -64,6 +64,17 @@ def test_writer_retries_once_with_verifier_feedback() -> None:
     assert "body states 0.83, which is not in FACTS" in writer.prompts[1]
 
 
+def test_demo_plant_is_caught_by_the_verifier_and_never_reaches_fans() -> None:
+    """The failure-recovery demo: PITCHMIND_DEMO_PLANT hallucinates a number on the first draft."""
+    writer = Scripted(N)
+    insights = run_moment(make_service({N: writer}, demo_plant=True), "mom-M001-1")
+    assert "body states 0.99, which is not in FACTS" in writer.prompts[1]
+    for insight in insights.values():
+        assert not insight.fallback and insight.verified and "0.99" not in insight.body
+    assert insights[EN_KEY].agent_trace == [ORCH, N, V, N, V, P, V]
+    assert AgentsConfig.from_env({"PITCHMIND_DEMO_PLANT": "1"}).demo_plant
+
+
 def test_writer_wrong_twice_falls_back_to_template_everywhere() -> None:
     writer = Scripted(N, lambda d, _, n: plant("0.83")(d))
     insights = run_moment(make_service({N: writer}), "mom-M001-1")
@@ -198,7 +209,7 @@ def test_one_slow_segment_does_not_hold_back_the_others() -> None:
 
     insights = run_moment(make_service({P: persona}), "mom-M001-1")
     assert (insights[EN_KEY].latency_ms or 0) < 300
-    assert (insights[AR_KEY].latency_ms or 0) >= 600
+    assert (insights[AR_KEY].latency_ms or 0) >= 580  # sleep(0.6) can measure 598 ms on Windows timers
 
 
 def test_moment_deadline_publishes_templates_for_late_segments() -> None:

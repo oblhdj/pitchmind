@@ -36,6 +36,7 @@ from .stages import Stage, consume
 logger = logging.getLogger(__name__)
 
 HISTORY_EVENTS = 300  # recent events sent to a client that joins mid-match
+FINISHED_MATCHES = 16  # earlier matches whose late messages are dropped
 MAX_CLIENT_FRAME = 4096  # bytes; clients only ever send tiny subscribe messages
 SUBSCRIBE_INTERVAL_S = 1.0  # a client may switch segment at most once per second
 
@@ -57,6 +58,7 @@ class Gateway:
         self.moments: list[Moment] = []
         self.insights: list[Insight] = []
         self.overlays: list[Overlay] = []
+        self._finished: deque[str] = deque(maxlen=FINISHED_MATCHES)  # earlier match ids, ignored from now on
         self.clients: dict[ServerConnection, str | None] = {}
         # Clients still receiving their catch-up: live messages wait here so order is kept.
         self._catching_up: dict[ServerConnection, list[str]] = {}
@@ -70,6 +72,10 @@ class Gateway:
 
     def observe(self, message: Wire) -> None:
         """Remember the message for late joiners, record it, and push it to live clients."""
+        if message.match_id in self._finished:
+            # A late message of an earlier match (slow agents finish after the next kick-off, or a
+            # redelivered re-announcement): it must not mix into this match's history or clocks.
+            return
         match message:
             case MatchMeta():
                 if self.meta is not None and self.meta.match_id == message.match_id:
@@ -101,10 +107,17 @@ class Gateway:
             broadcast(targets, text)
 
     def _reset(self, meta: MatchMeta) -> None:
+        # Keep what already belongs to this match: a gateway that starts after kick-off hears
+        # events before the next re-announcement, and they are part of its history.
+        match_id = meta.match_id
+        if self.meta is not None:
+            self._finished.append(self.meta.match_id)
         self.meta = meta
-        self.events.clear()
-        self.snapshot = None
-        self.moments, self.insights, self.overlays = [], [], []
+        self.events = deque((e for e in self.events if e.match_id == match_id), maxlen=HISTORY_EVENTS)
+        self.snapshot = self.snapshot if self.snapshot and self.snapshot.match_id == match_id else None
+        self.moments = [m for m in self.moments if m.match_id == match_id]
+        self.insights = [i for i in self.insights if i.match_id == match_id]
+        self.overlays = [o for o in self.overlays if o.match_id == match_id]
 
     def catch_up(self, segment: str | None) -> list[Wire]:
         head: list[Wire] = [self.meta] if self.meta else []
