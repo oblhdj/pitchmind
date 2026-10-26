@@ -22,6 +22,7 @@ from .workflow import MomentJob, build_workflow
 logger = logging.getLogger(__name__)
 
 WireIn = MatchMeta | MatchEvent | StatSnapshot | Moment | Insight | Overlay
+KEEP_MATCHES = 2  # the live match plus the previous one (its late recap, redeliveries)
 
 
 @dataclass
@@ -45,7 +46,19 @@ class AgentsService:
     def context(self, match_id: str) -> MatchContext:
         if match_id not in self._contexts:
             self._contexts[match_id] = MatchContext(match_id)
+            self._forget_old_matches()
         return self._contexts[match_id]
+
+    def _forget_old_matches(self) -> None:
+        """Bound memory when matches never stop (the cloud simulator loops M001, M002, ...).
+
+        Not done at full time: the recap moment and redeliveries can still arrive after it.
+        A match with a moment still being processed is kept.
+        """
+        busy = {match_id for match_id, _ in self._running}
+        for old in list(self._contexts)[:-KEEP_MATCHES]:
+            if old not in busy:
+                self.close_match(old)
 
     def close_match(self, match_id: str) -> None:
         """Forget a finished match's state and published insights."""

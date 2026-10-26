@@ -32,9 +32,10 @@ class FakeBatch(list[Any]):
 
 class FakeProducer:
     sent: list[FakeBatch] = []  # noqa: RUF012 (shared on purpose: collects batches from every instance)
+    hubs: list[str] = []  # noqa: RUF012 (one entry per producer created)
 
     def __init__(self, **kwargs: Any) -> None:
-        self.hub = kwargs["eventhub_name"]
+        FakeProducer.hubs.append(kwargs["eventhub_name"])
 
     async def create_batch(self, partition_key: str) -> FakeBatch:
         return FakeBatch(partition_key)
@@ -76,7 +77,7 @@ def fake_consumer(behaviour: Callable[[OnEvent], Awaitable[None]]) -> type:
 
 
 def test_publish_partitions_by_match(monkeypatch: pytest.MonkeyPatch) -> None:
-    FakeProducer.sent = []
+    FakeProducer.sent, FakeProducer.hubs = [], []
     monkeypatch.setattr(eventhubs, "EventHubProducerClient", FakeProducer)
 
     async def scenario() -> None:
@@ -87,6 +88,7 @@ def test_publish_partitions_by_match(monkeypatch: pytest.MonkeyPatch) -> None:
 
     asyncio.run(scenario())
     assert [b.partition_key for b in FakeProducer.sent] == ["M7", "M9"]
+    assert FakeProducer.hubs == [Topic.MATCH_EVENTS.value]  # one producer per topic, reused
     assert len(FakeProducer.sent[0]) == 1
 
 

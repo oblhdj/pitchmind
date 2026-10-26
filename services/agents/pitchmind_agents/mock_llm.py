@@ -75,4 +75,4 @@ def mock_client_set(*, delay_s: float = 0.0, overrides: Mapping[AgentName, Respo
         role: FunctionChatClient(overrides.get(role) or grounded_responder(role, delay_s=delay_s))
         for role in LLM_AGENTS
     }
-    return ClientSet(clients=clients, models=dict.fromkeys(LLM_AGENTS, "mock"))
+    return ClientSet(clients=clients, models=dict.fromkeys(LLM_AGENTS, "mock"), translates=False)

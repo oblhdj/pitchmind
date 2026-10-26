@@ -231,7 +231,7 @@ def test_an_unexpected_error_only_costs_its_segment(monkeypatch: pytest.MonkeyPa
 def test_insight_names_the_model_that_wrote_its_text() -> None:
     base = mock_client_set()
     models = {**base.models, P: "persona-model", L: "language-model", N: "writer-model"}
-    service = AgentsService(AgentTeam(ClientSet(clients=base.clients, models=models)))
+    service = AgentsService(AgentTeam(ClientSet(clients=base.clients, models=models, translates=False)))
     insights = run_moment(service, "mom-M001-1")
     assert insights[EN_KEY].model == "persona-model"
     assert insights[AR_KEY].model == "language-model"

@@ -37,8 +37,12 @@ class Verdict:
     insufficient: bool = False  # the agent said the facts are not enough; retrying will not help
 
 
-def check(draft: Draft, facts: Facts, language: Language = Language.EN) -> Verdict:
-    """Deterministic grounding checks. Never calls an LLM."""
+def check(draft: Draft, facts: Facts, language: Language = Language.EN, *, check_language: bool = True) -> Verdict:
+    """Deterministic grounding checks. Never calls an LLM.
+
+    ``check_language`` rejects text left in English for a non-English segment; it is off for
+    clients that cannot translate (the offline mock).
+    """
     if draft.status != "ok":
         return Verdict(False, ("the agent reported insufficient evidence",), insufficient=True)
     issues: list[str] = []
@@ -72,7 +76,152 @@ def check(draft: Draft, facts: Facts, language: Language = Language.EN) -> Verdi
             issues.append(f"{where} contains markup, a link or control characters; write plain text")
         if bad_numbers := unsupported_numbers(text, allowed, language):
             issues.append(f"{where} states {', '.join(bad_numbers)}, which is not in FACTS")
+        if bad_names := invented_first_names(text, facts):
+            issues.append(f"{where} names {', '.join(bad_names)}, which does not match FACTS.players")
+    if check_language:
+        shown = [("headline and body", f"{headline} {body}"), ("claims", " ".join(c.text for c in draft.claims))]
+        issues.extend(f"{where}: {wrong}" for where, text in shown if (wrong := wrong_language(text, language)))
     return Verdict(not issues, tuple(issues))
+
+
+_APOSTROPHES = "'" + chr(0x2019)  # straight and typographic
+_WORD_RE = re.compile(rf"[^\W\d_]+(?:[{_APOSTROPHES}-][^\W\d_]+)*")
+_ENGLISH_MARKERS = frozenset(
+    [
+        "the",
+        "and",
+        "of",
+        "was",
+        "with",
+        "his",
+        "her",
+        "this",
+        "that",
+        "from",
+        "scored",
+        "into",
+        "after",
+        "before",
+        "their",
+        "they",
+        "were",
+        "is",
+        "are",
+        "has",
+        "have",
+        "for",
+        "scores",
+        "by",
+        "to",
+        "against",
+        "shot",
+        "goal",
+    ]
+)
+_ARABIC_LETTER = re.compile(r"[؀-ۿ]")
+_LATIN_LETTER = re.compile(r"[A-Za-z]")
+# Capitalised words that may precede a surname without being a first name.
+_SENTENCE_STARTERS = frozenset(
+    [
+        "The",
+        "A",
+        "An",
+        "When",
+        "After",
+        "Before",
+        "Then",
+        "And",
+        "But",
+        "So",
+        "Now",
+        "Here",
+        "There",
+        "Le",
+        "La",
+        "Les",
+        "Un",
+        "Une",
+        "El",
+        "Los",
+        "Las",
+        "Una",
+        "Pour",
+        "Par",
+        "Para",
+        "Por",
+        "Con",
+        "Avec",
+        "Sur",
+        "Dans",
+        "En",
+        "Et",
+        "Mais",
+        "Puis",
+        "Goal",
+        "Gol",
+        "Captain",
+        "Keeper",
+        "Striker",
+        "Winger",
+        "Defender",
+        "As",
+        "While",
+        "With",
+        "Forward",
+        "Midfielder",
+        "Goalkeeper",
+        "Substitute",
+        "Coach",
+        "Attaquant",
+        "Milieu",
+        "Défenseur",
+        "Gardien",
+        "Delantero",
+        "Portero",
+        "Centrocampista",
+        "Defensa",
+    ]
+)
+
+
+def wrong_language(text: str, language: Language) -> str | None:
+    """Catch a translation that never happened: English left in a French, Spanish or Arabic text."""
+    if language is Language.EN or not text.strip():
+        return None
+    if language is Language.AR:
+        arabic, latin = len(_ARABIC_LETTER.findall(text)), len(_LATIN_LETTER.findall(text))
+        # Player and team names stay in Latin script, so a minority of Latin letters is fine.
+        return None if arabic >= latin else "the text is not in Arabic; translate it (names stay in Latin script)"
+    words = [w.lower() for w in _WORD_RE.findall(text)]
+    english = sum(w in _ENGLISH_MARKERS for w in words)
+    if english >= 3 and english / max(len(words), 1) >= 0.08:
+        return f"the text is still in English; write it in {language.value}"
+    return None
+
+
+def _title_case(text: str) -> bool:
+    """Most words capitalised, as in many headlines ("Early Strike From Halvorsen")."""
+    words = _WORD_RE.findall(text)
+    return len(words) >= 3 and sum(w[0].isupper() for w in words) / len(words) >= 0.6
+
+
+def invented_first_names(text: str, facts: Facts) -> list[str]:
+    """A capitalised word glued to a known surname that is not the player's real name ("Johan Halvorsen").
+
+    To avoid rejecting good text, it skips Title Case text (capitals carry no signal there) and the
+    first word of a sentence, so an invented name opening a sentence goes unnoticed: a known gap.
+    """
+    if _title_case(text):
+        return []
+    found: list[str] = []
+    for player in facts.players:
+        for match in re.finditer(rf"\b([A-Z][a-zà-ÿ]+)\s+{re.escape(player.name)}\b", text):
+            word, before = match.group(1), text[: match.start()].rstrip()
+            phrase = f"{word} {player.name}"
+            sentence_start = not before or before[-1] in ".!?:"
+            if phrase not in player.full_name and word not in _SENTENCE_STARTERS and not sentence_start:
+                found.append(phrase)
+    return found
 
 
 class Verifier:
@@ -87,7 +236,7 @@ class Verifier:
         The judge is advisory: if it cannot be reached, the code verdict stands (logged and
         traced), so a judge outage never blanks the overlay.
         """
-        verdict = check(draft, facts, language)
+        verdict = check(draft, facts, language, check_language=self._team.translates)
         if not verdict.ok or not judge or not self._team.judge_enabled:
             return verdict
         try:

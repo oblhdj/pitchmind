@@ -19,6 +19,7 @@ class AgentsConfig:
     disabled_agents: frozenset[AgentName] = field(default_factory=frozenset)  # failure-recovery demo switch
     breaker_threshold: int = 3  # consecutive failures that open an agent's circuit
     breaker_cooldown_s: float = 30.0
+    requests_per_minute: int = 0  # 0 = unlimited; set below the model deployment's RPM limit
 
     def __post_init__(self) -> None:
         checks = [
@@ -28,6 +29,7 @@ class AgentsConfig:
             (0 <= self.min_importance <= 1, "min_importance must be between 0 and 1"),
             (self.breaker_threshold >= 1, "breaker_threshold must be at least 1"),
             (self.breaker_cooldown_s >= 0, "breaker_cooldown_s must be 0 or more"),
+            (self.requests_per_minute >= 0, "requests_per_minute must be 0 or more"),
         ]
         for ok, message in checks:
             if not ok:
@@ -59,6 +61,7 @@ class AgentsConfig:
                 max_retries=read("PITCHMIND_MAX_RETRIES", int, defaults.max_retries),
                 judge=env.get("PITCHMIND_JUDGE", "0").strip().lower() in {"1", "true", "yes"},
                 min_importance=read("PITCHMIND_MIN_IMPORTANCE", float, defaults.min_importance),
+                requests_per_minute=read("PITCHMIND_RPM", int, defaults.requests_per_minute),
                 disabled_agents=frozenset(AgentName(name) for name in disabled),
             )
         except ValueError as exc:

@@ -6,8 +6,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
-
 
 class ClaimDraft(BaseModel):
     model_config = ConfigDict(extra="forbid")

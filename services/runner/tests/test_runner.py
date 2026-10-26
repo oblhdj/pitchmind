@@ -11,6 +11,7 @@ import pytest
 from pitchmind_agents import AgentsService, parse_segments
 from pitchmind_bus import Wire
 from pitchmind_contracts import (
+    AgentName,
     Insight,
     InsightKind,
     MatchMeta,
@@ -21,7 +22,7 @@ from pitchmind_contracts import (
     parse_wire,
 )
 from pitchmind_runner import Gateway, Pipeline, PipelineConfig, cloud, read_recording, replay_recording
-from pitchmind_runner.__main__ import parse_args
+from pitchmind_runner.__main__ import agents_config, parse_args
 from pitchmind_runner.cloud import config_from_env
 from pitchmind_runner.cloud import main as cloud_main
 from websockets.asyncio.client import connect
@@ -228,3 +229,9 @@ def test_a_recorded_match_replays_identically(played: tuple[Gateway, Path]) -> N
     assert [i.id for i in replayed.insights] == [i.id for i in gateway.insights]
     assert [o.overlay_id for o in replayed.overlays] == [o.overlay_id for o in gateway.overlays]
     assert replayed.snapshot == gateway.snapshot
+
+
+def test_local_runner_reads_agent_settings_from_the_environment() -> None:
+    config = agents_config(["persona"], {"PITCHMIND_RPM": "18", "PITCHMIND_DISABLED_AGENTS": "language"})
+    assert config.requests_per_minute == 18
+    assert config.disabled_agents == {AgentName.PERSONA, AgentName.LANGUAGE}

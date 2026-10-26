@@ -98,6 +98,25 @@ def test_close_match_forgets_its_state() -> None:
     assert not service.context("M001").seen("mom-M001-1")
 
 
+def test_old_matches_are_forgotten_as_new_ones_start() -> None:
+    service = new_service()
+    asyncio.run(service.process(prime(service, "mom-M001-1")))
+    for match_id in ("M002", "M003"):
+        service.context(match_id)
+    assert list(service._contexts) == ["M002", "M003"]  # the live match and the previous one
+    assert "M001" not in service._published
+    assert not service.context("M001").seen("mom-M001-1")  # M001 starts afresh if it ever comes back
+
+
+def test_a_match_still_being_processed_is_not_forgotten() -> None:
+    service = new_service()
+    service.context("M001")
+    service._running[("M001", "mom-M001-1")] = service_module._Run()
+    for match_id in ("M002", "M003"):
+        service.context(match_id)
+    assert "M001" in service._contexts
+
+
 def test_downstream_messages_are_ignored() -> None:
     service = new_service()
     insight = next(m for m in mock_messages() if isinstance(m, Insight))
