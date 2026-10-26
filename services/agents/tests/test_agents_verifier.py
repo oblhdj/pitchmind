@@ -41,7 +41,9 @@ def test_numbers_written_as_words_are_checked(goal: Facts) -> None:
     english = with_body(goal, "Scored in the eleventh minute; one in four chances like that go in.")
     assert check(english, goal).issues == ("body states eleventh, four, which is not in FACTS",)
     french = with_body(goal, "Une occasion de ce type finit au fond quatre fois sur dix.")
-    assert check(french, goal, Language.FR).issues == ("body states quatre, dix, which is not in FACTS",)
+    assert check(french, goal, Language.FR, check_language=False).issues == (
+        "body states quatre, dix, which is not in FACTS",
+    )
     assert check(with_body(goal, "Halvorsen scores in the ninth minute."), goal).ok
 
 

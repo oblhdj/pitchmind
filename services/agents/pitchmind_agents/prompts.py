@@ -19,14 +19,16 @@ from .schemas import Draft
 GROUNDING_RULES = """\
 Grounding rules. A code Verifier enforces them and rejects any answer that breaks one.
 - Use only the supplied FACTS. Do not invent players, statistics, events or tactical conclusions.
-- Every factual claim cites one or more event ids in "evidence", taken only from FACTS.evidence.
+- Every factual claim cites one or more event ids in "evidence", taken only from FACTS.evidence. Event ids \
+belong only in "evidence": never write them in the headline, body or claim text.
 - Every number you write must appear in FACTS (metrics, minute, score, summaries). Do not compute, \
 convert or round to new numbers; no percentages unless the metric already is one.
 - Write every number as digits, ordinals too ("9th minute", "4 shots"); never spell numbers out. Name the halves \
 in words ("first half", "second half"). No thousands separators.
 - Plain text only: no HTML, Markdown, links or URLs.
 - In each claim, "metrics" lists the FACTS.metrics names the claim relies on (it may be empty).
-- Keep player and team names exactly as written in FACTS.
+- Keep player and team names exactly as written in FACTS. Never add first names, nicknames, competitions, \
+venues or other proper names that FACTS does not contain.
 - If FACTS are not enough to say anything useful, set status to "INSUFFICIENT_EVIDENCE" with empty \
 headline, body and claims.
 - Return JSON only, matching the response schema."""
@@ -154,9 +156,11 @@ def persona_prompt(
 
 
 def language_prompt(draft: Draft, segment: Segment, *, issues: Sequence[str] = ()) -> str:
+    target = LANGUAGE_NAMES[segment.language]
     task = (
-        f"Target language: {LANGUAGE_NAMES[segment.language]} ({segment.language.value}). "
-        f"Persona: {segment.persona.value}."
+        f"Target language: {target} ({segment.language.value}). Persona: {segment.persona.value}. "
+        f"Write the headline, the body and every claim text entirely in {target}: "
+        "no sentence may stay in English. Only player and team names stay as they are."
     )
     sections = [_text("TASK", task), _json("DRAFT", draft.model_dump(mode="json")), *_feedback(None, issues)]
     return "\n\n".join(sections)

@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import dataclasses
 import logging
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 from pitchmind_agents import LLM_AGENTS, AgentsConfig, parse_segments
@@ -74,17 +76,25 @@ async def run(args: argparse.Namespace) -> None:
                 match_id=args.match_id,
                 speed=args.speed,
                 llm=args.llm,
-                agents=AgentsConfig(disabled_agents=frozenset(AgentName(name) for name in args.disable)),
+                agents=agents_config(args.disable),
             )
             pipeline = Pipeline(config, gateway)
             pipeline.start()
             logger.info("playing %s (%s agents) at %gx", config.scenario, config.llm, config.speed)
             await pipeline.play()
-            await pipeline.drain(timeout_s=600)
+            # Real models under an RPM limit can still be working through moments at full time.
+            await pipeline.drain(timeout_s=600 if args.llm == "mock" else 3600)
             logger.info("full time: %d insights, %d overlays", len(gateway.insights), len(gateway.overlays))
         gateway.close()
         logger.info("match over; still serving the replay to new clients (Ctrl+C to stop)")
         await asyncio.Future()  # serve until interrupted
+
+
+def agents_config(disable: list[str], env: Mapping[str, str] | None = None) -> AgentsConfig:
+    """``PITCHMIND_*`` settings (timeouts, RPM limit...) plus the agents killed with ``--disable``."""
+    base = AgentsConfig.from_env(env)
+    killed = frozenset(AgentName(name) for name in disable)
+    return dataclasses.replace(base, disabled_agents=base.disabled_agents | killed)
 
 
 def main(argv: list[str] | None = None) -> None:

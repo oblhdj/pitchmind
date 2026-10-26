@@ -22,6 +22,8 @@ from .workflow import MomentJob, build_workflow
 logger = logging.getLogger(__name__)
 
 WireIn = MatchMeta | MatchEvent | StatSnapshot | Moment | Insight | Overlay
+KEEP_MATCHES = 2  # the live match plus the previous one (its late recap, redeliveries)
+FORGOTTEN_MAX = 100  # closed match ids remembered, so their late messages are dropped
 
 
 @dataclass
@@ -41,23 +43,51 @@ class AgentsService:
         self._contexts: dict[str, MatchContext] = {}
         self._published: dict[str, dict[str, tuple[Insight, ...]]] = {}  # match id -> moment id -> insights
         self._running: dict[tuple[str, str], _Run] = {}
+        self._forgotten: dict[str, None] = {}  # ordered set of closed match ids
+
+    @property
+    def tracked_matches(self) -> tuple[str, ...]:
+        """Matches whose state is held, oldest first."""
+        return tuple(self._contexts)
 
     def context(self, match_id: str) -> MatchContext:
         if match_id not in self._contexts:
             self._contexts[match_id] = MatchContext(match_id)
+            self._forget_old_matches()
         return self._contexts[match_id]
 
+    def _forget_old_matches(self) -> None:
+        """Bound memory when matches never stop (the cloud simulator loops M001, M002, ...).
+
+        Not done at full time: the recap moment and redeliveries can still arrive after it.
+        A match with a moment still being processed is kept.
+        """
+        busy = {match_id for match_id, _ in self._running}
+        for old in list(self._contexts)[:-KEEP_MATCHES]:
+            if old not in busy:
+                self.close_match(old)
+
     def close_match(self, match_id: str) -> None:
-        """Forget a finished match's state and published insights."""
+        """Forget a finished match's state and published insights; its late messages are then dropped."""
         self._contexts.pop(match_id, None)
         self._published.pop(match_id, None)
+        self._forgotten[match_id] = None
+        while len(self._forgotten) > FORGOTTEN_MAX:
+            del self._forgotten[next(iter(self._forgotten))]
+
+    def is_closed(self, match_id: str) -> bool:
+        return match_id in self._forgotten
 
     async def handle(self, msg: WireIn) -> list[Insight]:
         match msg:
-            case Moment():
-                return await self.process(msg)
             case Insight() | Overlay():
                 return []  # downstream messages, not ours
+            case _ if self.is_closed(msg.match_id):
+                # Recreating a closed match would push out the live ones, for an empty context anyway.
+                logger.info("%s message for closed match %s dropped", msg.msg, msg.match_id)
+                return []
+            case Moment():
+                return await self.process(msg)
             case _:
                 self.context(msg.match_id).observe(msg)
                 return []
@@ -75,6 +105,9 @@ class AgentsService:
         with the same ids, instead of calling the agents again. A run that was interrupted
         before finishing is not remembered, so its redelivery runs the moment again.
         """
+        if self.is_closed(moment.match_id):
+            logger.info("%s: match %s is closed; moment dropped", moment.id, moment.match_id)
+            return
         published = self._published.setdefault(moment.match_id, {})
         if (done := published.get(moment.id)) is not None:
             for insight in done:
