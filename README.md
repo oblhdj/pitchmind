@@ -50,6 +50,7 @@ Measured live on Foundry Phi-4, with the match at 4× speed:
 | Moment → insight, p50 | **~41 s** |
 | Per-agent p50 | explain 7.2 s · narrative 8.2 s · recap 9.8 s · persona 8.6 s · language 10.2 s |
 | Planted wrong numbers (`demo.ps1 plant`) | **6 of 6** rejected by the Verifier; none reached fans |
+| Foundry Evals on a full live match | groundedness **4.38/5**, numeric fidelity **1.00** (225 numbers), 3 languages: [details and caveats](docs/EVALS.md) |
 
 ## Architecture
 
@@ -89,7 +90,7 @@ Deploy your own: `az login`, then `./infra/deploy.ps1`.
 
 ## Docs
 
-[Demo video shot list](docs/VIDEO.md) · [Plan](docs/PLAN.pdf) · [Resources](docs/RESOURCES.md) ·
+[Evaluations](docs/EVALS.md) · [Demo video shot list](docs/VIDEO.md) · [Plan](docs/PLAN.pdf) · [Resources](docs/RESOURCES.md) ·
 [Team](docs/TEAM.md) · [Datasets & papers](docs/DATASETS_AND_PAPERS.md)
 
 ## License

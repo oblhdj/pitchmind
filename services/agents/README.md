@@ -73,24 +73,26 @@ pitchmind.moment            moment id, kind, writer, segments, fallbacks, latenc
 # Offline: numeric fidelity on freshly generated mock insights
 .\.venv\Scripts\python.exe -m pitchmind_agents.evals
 
-# Foundry: generate with the real models, then score groundedness + fluency in Foundry Evals
-.\.venv\Scripts\python.exe -m pitchmind_agents.evals --llm foundry --foundry --segments all --env-file .env --markdown docs/EVALS.md
+# Foundry: generate with the real models (saved as they arrive), then score groundedness + fluency in Foundry Evals
+.\.venv\Scripts\python.exe -m pitchmind_agents.evals --llm foundry --foundry --segments all --env-file .env --save-insights data/sim/insights.jsonl --markdown docs/EVALS.md
 
-# Score an existing insights file (e.g. one captured from the deployed service)
-.\.venv\Scripts\python.exe -m pitchmind_agents.evals --insights data/sim/insights.jsonl --foundry
+# Score an existing file, e.g. a feed recorded from the deployed gateway (moments and insights in one file)
+.\.venv\Scripts\python.exe -m pitchmind_agents.evals --input data/sim/live.jsonl --insights data/sim/live.jsonl --foundry --judge-model Phi-4-mini-instruct --env-file .env
 ```
 
 Every insight becomes an Agent Framework `EvalItem`: the query names the moment and audience, the response is the headline and body fans see, and the context is the exact `Facts` the agents were given.
 
 | Metric | Provider | What it measures |
 |---|---|---|
-| `groundedness` | Microsoft Foundry (`builtin.groundedness`) | Is every statement supported by the facts? (1-5) |
-| `fluency` | Microsoft Foundry (`builtin.fluency`) | Is the text natural and well written? (1-5) |
-| `numeric_fidelity` | PitchMind (code) | Share of numbers in the text that appear in the facts (0-1) |
+| `groundedness` | Microsoft Foundry (`builtin.groundedness`) | Is every statement supported by the facts? (1-5, pass/fail from Foundry) |
+| `fluency` | Microsoft Foundry (`builtin.fluency`) | Is the text natural and well written? (1-5, pass/fail from Foundry) |
+| `numeric_fidelity` | PitchMind (code) | Share of numbers in the text that appear in the facts (0-1). It reuses the Verifier's number parser, so it is a regression check, not independent evidence |
 
-The report adds pipeline numbers taken from the insights themselves: verified rate, template fallback rate, how many insights the Verifier accepted on the first pass, and latency p50/p95. The judge model is `FOUNDRY_EVAL_MODEL` (default `FOUNDRY_MODEL_STRONG`).
+Only insights the agents wrote are scored: a template fallback is fixed text filled in by code. The pipeline table counts every insight: moments (insights of one moment share a writer run, so this is the real sample size), agent-written vs template share, first-pass acceptance, and latency p50/p95 (nearest rank).
 
-As a check, the hand-written insights in `data/mock/stream.jsonl` score 0.96 on numeric fidelity (27/31). The 4 misses are numbers a writer derived rather than read: "4 fois sur 10" from an xG of 0.38, "12%" from 0.12. The Verifier would have rejected those drafts.
+The judge is `--judge-model`, else `FOUNDRY_EVAL_MODEL`, else `FOUNDRY_MODEL_STRONG`. Judging on a deployment the live agents do not use keeps it off their quota. The Foundry run gets 30 minutes (`--foundry-timeout`). A run that times out, fails or returns fewer items is listed under **Problem** and the CLI exits 1; errored items count as "No score". A timed-out run keeps going in Foundry: the Problem line gives the `--foundry-run EVAL_ID/RUN_ID` to collect it later with the same `--insights`, instead of paying for a second run. Foundry numbers its result items from 1 and leaves their text empty, so each score is traced back to its insight through the run's data rows; failures and the per-language means in the notes rely on that. Portal links to the run are printed to stderr only, since they contain subscription ids.
+
+As a check, the hand-written insights in `data/mock/stream.jsonl` score 1.00 on numeric fidelity (31/31). Numbers a writer derives rather than reads, such as "4 fois sur 10" from an xG of 0.38 or "12%" from 0.12, are caught (see `test_numeric_fidelity_catches_derived_numbers`); the Verifier rejects such drafts.
 
 ## Options
 

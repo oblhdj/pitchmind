@@ -8,17 +8,20 @@ from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
-from agent_framework import EvalItem, EvalResults
+from agent_framework import EvalItem, EvalItemResult, EvalResults, EvalScoreResult, Message
 from azure.core.credentials import AccessToken
-from pitchmind_agents import AgentsService, AgentTeam, Draft, mock_client_set
+from pitchmind_agents import AgentsService, AgentTeam, Draft, evals, mock_client_set
 from pitchmind_agents.evals import (
+    FOUNDRY_TIMEOUT_S,
     EvalCase,
     NumericFidelity,
     build_cases,
     evaluate_insights,
     foundry_evaluators,
+    load_insights,
     pipeline_stats,
     replay_facts,
+    summarize,
     to_eval_item,
 )
 from pitchmind_agents.evals import main as evals_main
@@ -98,7 +101,68 @@ def test_a_failing_evaluator_does_not_lose_the_other_results() -> None:
     report = asyncio.run(evaluate_insights(build_cases(HAND_WRITTEN, FACTS), [NumericFidelity(), Broken()]))
     assert [row.metric for row in report.rows] == ["numeric_fidelity"]
     assert report.errors == ["Broken provider: ConnectionError: Foundry unreachable"]
-    assert "Evaluator failed: Broken provider" in report.to_markdown()
+    assert "Problem: Broken provider" in report.to_markdown()
+
+
+CASES = build_cases(HAND_WRITTEN, FACTS)
+
+
+def judged(text: str | None, score: float | None, passed: bool | None, item_id: str = "outputitem_x") -> EvalItemResult:
+    """One Foundry output item, as ``FoundryEvals`` parses it (errored items carry no score)."""
+    scores = [EvalScoreResult(name="groundedness", score=cast(float, score), passed=passed)]
+    return EvalItemResult(item_id=item_id, status="pass" if passed else "fail", scores=scores, output_text=text)
+
+
+def test_a_foundry_run_that_times_out_or_fails_is_reported_not_dropped() -> None:
+    url = "https://ai.azure.com/resource/subscriptions/0000/run/1"
+    results = [
+        EvalResults(provider="Microsoft Foundry", status="timeout", report_url=url),
+        EvalResults(provider="Microsoft Foundry", status="failed", error=f"quota exceeded, see {url}"),
+    ]
+    report = summarize(results, CASES[:3])
+    assert report.rows == []
+    assert report.errors == ["Microsoft Foundry run timeout", "Microsoft Foundry run failed: quota exceeded, see <url>"]
+    assert "Problem: Microsoft Foundry run timeout" in report.to_markdown()
+    assert report.links == [url]
+    assert "subscriptions" not in json.dumps(report.to_dict())  # portal links stay out of what is published
+
+
+def test_errored_judge_items_count_as_no_score_without_breaking_the_report() -> None:
+    cases = CASES[:4]
+    items = [
+        judged(cases[0].response, 4, True),
+        judged(cases[1].response, 2, False),
+        judged(cases[2].response, None, None),
+    ]
+    report = summarize([EvalResults(provider="Microsoft Foundry", items=items)], cases)  # no item for cases[3]
+    (row,) = report.rows
+    assert (row.metric, row.scale, row.mean_score) == ("groundedness", "1-5", 3.0)
+    assert (row.passed, row.total, row.errored) == (1, 4, 2)
+    assert report.errors == ["Microsoft Foundry returned 3 of 4 items"]
+    assert "| groundedness | Microsoft Foundry | 1-5 | 3.00 | 1/4 | 2 |" in report.to_markdown()
+
+
+def test_cloud_failures_are_matched_on_the_response_not_the_position() -> None:
+    cases = CASES[:3]
+    numeric_id = judged(cases[2].response.replace("\n", " "), 1, False, item_id="1")
+    unknown = judged(None, 1, False, item_id="7")
+    report = summarize([EvalResults(provider="Microsoft Foundry", items=[numeric_id, unknown])], cases)
+    assert [f["insight_id"] for f in report.failures] == [cases[2].insight.id, "Microsoft Foundry item 7"]
+
+
+def test_p95_is_the_nearest_rank() -> None:
+    first = next(i for i in HAND_WRITTEN if not i.fallback)
+    stats = pipeline_stats([first.model_copy(update={"latency_ms": ms}) for ms in range(1, 32)])
+    assert stats["latency_p95_ms"] == 30  # 95% of 31 values is 29.45: the 30th value, not round()'s 29th
+    assert stats["latency_p50_ms"] == 16
+    assert stats["moments"] == 1  # one writer run behind all 31: the real sample size
+
+
+def test_numeric_fidelity_needs_the_target_language() -> None:
+    conversation = [Message(role="user", contents=["Write the recap."]), Message(role="assistant", contents=["2-1"])]
+    item = EvalItem(conversation=conversation, context=CASES[0].facts.model_dump_json())
+    with pytest.raises(ValueError, match="no target language"):
+        asyncio.run(NumericFidelity().evaluate([item]))
 
 
 def test_replayed_facts_match_what_the_service_saw() -> None:
@@ -171,6 +235,97 @@ def test_foundry_evaluators_need_endpoint_and_judge_model() -> None:
         credential=FakeCredential(),
     )
     assert evaluators.name == "Microsoft Foundry"
+    assert evaluators._evals._timeout == FOUNDRY_TIMEOUT_S  # the library's 180 s times out on a shared quota
+
+
+class FakeFoundry:
+    """What a real run returned: output items numbered from 1, with no output text."""
+
+    name = "Microsoft Foundry"
+
+    def __init__(self, items: list[EvalItemResult]) -> None:
+        self.items = items
+
+    async def evaluate(self, items: Sequence[EvalItem], *, eval_name: str) -> EvalResults:
+        return EvalResults(provider=self.name, eval_id="eval_1", run_id="evalrun_1", items=self.items)
+
+
+def test_foundry_scores_are_traced_to_insights_through_the_run_rows() -> None:
+    cases = CASES[:3]
+    rows = [SimpleNamespace(id=str(n + 1), datasource_item={"response": c.response}) for n, c in enumerate(cases)]
+
+    async def listing(**kwargs: Any) -> Any:
+        assert kwargs == {"run_id": "evalrun_1", "eval_id": "eval_1"}
+        for row in rows:
+            yield row
+
+    async def output_items(**kwargs: Any) -> Any:
+        return listing(**kwargs)
+
+    api = SimpleNamespace(evals=SimpleNamespace(runs=SimpleNamespace(output_items=SimpleNamespace(list=output_items))))
+    scored = [judged(None, 5, True, item_id="1"), judged(None, 4, True, item_id="2"), judged(None, 1, False, "3")]
+    traceable = evals.TraceableFoundryEvals(cast(Any, FakeFoundry(scored)), cast(Any, SimpleNamespace(client=api)))
+    result = asyncio.run(traceable.evaluate([to_eval_item(c) for c in cases], eval_name="t"))
+    report = summarize([result], cases)
+    assert [f["insight_id"] for f in report.failures] == [cases[2].insight.id]  # item "3" is row 2, not cases[3]
+    languages = {c.insight.segment.language.value for c in cases}
+    assert len(languages) > 1 and report.rows[0].note.startswith("by language: ")
+
+
+def test_a_timed_out_run_says_how_to_collect_it_and_collecting_starts_no_new_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    timed_out = EvalResults(provider="Microsoft Foundry", eval_id="eval_1", run_id="evalrun_1", status="timeout")
+    (problem,) = summarize([timed_out], CASES[:1]).errors
+    assert problem.endswith("collect it with --foundry-run eval_1/evalrun_1")
+
+    polled: list[tuple[str, str]] = []
+
+    async def poll(client: Any, eval_id: str, run_id: str, *args: Any, **kwargs: Any) -> EvalResults:
+        polled.append((eval_id, run_id))
+        return EvalResults(provider="Microsoft Foundry", status="timeout", eval_id=eval_id, run_id=run_id)
+
+    class NoNewRuns(FakeFoundry):
+        async def evaluate(self, items: Sequence[EvalItem], *, eval_name: str) -> EvalResults:
+            raise AssertionError("started a new Foundry run instead of collecting the earlier one")
+
+    monkeypatch.setattr(evals, "_poll_eval_run", poll)
+    traceable = evals.TraceableFoundryEvals(
+        cast(Any, NoNewRuns([])), cast(Any, SimpleNamespace(client=None)), run=("eval_1", "evalrun_1")
+    )
+    asyncio.run(traceable.evaluate([to_eval_item(CASES[0])], eval_name="t"))
+    assert polled == [("eval_1", "evalrun_1")]
+
+
+def test_cli_checks_foundry_settings_before_generating(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in ("FOUNDRY_PROJECT_ENDPOINT", "FOUNDRY_EVAL_MODEL", "FOUNDRY_MODEL_STRONG"):
+        monkeypatch.delenv(name, raising=False)
+
+    def must_not_run(*args: Any, **kwargs: Any) -> list[Insight]:
+        raise AssertionError("insights were generated before the Foundry settings were checked")
+
+    monkeypatch.setattr(evals, "generate", must_not_run)
+    with pytest.raises(ValueError, match="FOUNDRY_PROJECT_ENDPOINT"):
+        evals_main(["--input", str(MOCK_STREAM), "--llm", "foundry", "--foundry"])
+
+
+def test_cli_scores_only_agent_written_insights_and_flags_dropped_ones(tmp_path: Path) -> None:
+    out_json, insights = tmp_path / "evals.json", tmp_path / "insights.jsonl"
+    stray = HAND_WRITTEN[0].model_copy(update={"id": "ins-stray", "moment_id": "mom-elsewhere"})
+    insights.write_text("".join(i.model_dump_json() + "\n" for i in [*HAND_WRITTEN, stray]), encoding="utf-8")
+    assert evals_main(["--input", str(MOCK_STREAM), "--insights", str(insights), "--output", str(out_json)]) == 1
+    report = json.loads(out_json.read_text(encoding="utf-8"))
+    (metric,) = report["metrics"]
+    assert (metric["total"], metric["scale"]) == (30, "0-1")  # the one template fallback is not scored
+    assert (report["pipeline"]["insights"], report["pipeline"]["fallbacks"]) == (32, 1)
+    assert report["errors"] == ["not scored, their moment is not in --input: 1 insight(s)"]
+
+
+def test_cli_saves_generated_insights_as_one_complete_file(tmp_path: Path) -> None:
+    saved = tmp_path / "out" / "insights.jsonl"
+    assert evals_main(["--input", str(MOCK_STREAM), "--save-insights", str(saved)]) == 0
+    assert not saved.with_name("insights.jsonl.partial").exists()
+    assert len(load_insights(saved)) == 32
 
 
 def test_cli_writes_json_and_markdown(tmp_path: Path) -> None:
