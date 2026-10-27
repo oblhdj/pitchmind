@@ -90,8 +90,7 @@ Deploy your own: `az login`, then `./infra/deploy.ps1`.
 
 ## Docs
 
-[Evaluations](docs/EVALS.md) · [Demo video shot list](docs/VIDEO.md) · [Plan](docs/PLAN.pdf) · [Resources](docs/RESOURCES.md) ·
-[Team](docs/TEAM.md) · [Datasets & papers](docs/DATASETS_AND_PAPERS.md)
+[Evaluations](docs/EVALS.md) · [Demo video shot list](docs/VIDEO.md)
 
 ## License
 

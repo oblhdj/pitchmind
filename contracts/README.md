@@ -1,7 +1,6 @@
-# Contracts (v1.0 — frozen at M1)
+# Contracts (v1.0)
 
 The single source of truth for every message between services and the frontend.
-**Do not change these without telling the other person.**
 
 | Who | Use |
 |---|---|

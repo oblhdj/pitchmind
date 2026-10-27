@@ -1,4 +1,4 @@
-# Agents (WS3)
+# Agents
 
 Moments in, verified and personalised insights out. Built on **Microsoft Agent Framework** with models from **Microsoft Foundry**.
 

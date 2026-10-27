@@ -1,4 +1,4 @@
-# PitchMind web (WS4)
+# PitchMind web
 
 One Next.js app (App Router, TypeScript, Tailwind v4) with three routes:
 
